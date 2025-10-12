@@ -415,6 +415,35 @@
             opacity: 0.7;
         }
 
+        .fit-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+            background: var(--tg-theme-bg-color, white);
+            border: 2px solid var(--tg-theme-section-separator-color, #e0e0e0);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--tg-theme-text-color, #666);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fit-btn span:first-child {
+            font-size: 24px;
+        }
+
+        .fit-btn.active {
+            border-color: var(--tg-theme-button-color, #007AFF);
+            background: var(--tg-theme-button-color, #007AFF);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .fit-btn:active {
+            opacity: 0.7;
+        }
+
         @media (max-width: 640px) {
             .color-row {
                 grid-template-columns: 1fr;
@@ -455,7 +484,7 @@
         <div class="section">
             <div class="section-title">📝 Содержимое</div>
             <div class="help-text">
-                Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль — всё что угодно. Максимум ~2900 символов
+                Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль. <strong>Важно:</strong> случайные символы и смешанные языки требуют больше места в QR-коде
             </div>
             <div class="field">
                 <label for="qrText">Ссылка или текст <span id="charCounter" style="color: #999; font-weight: 400; font-size: 12px;">(0 / 2953 байт)</span></label>
@@ -517,7 +546,7 @@
         <div class="section" id="logoSizeSection" style="display: none;">
             <div class="section-title">📐 Настройки логотипа</div>
             <div class="help-text">
-                Выберите форму и размер области под логотип
+                Выберите форму, масштабирование и размер области под логотип
             </div>
             <div class="field">
                 <label>Форма</label>
@@ -534,6 +563,26 @@
                         <span>◻️</span>
                         <span>Квадрат</span>
                     </button>
+                </div>
+            </div>
+            <div class="field" style="margin-top: 16px;">
+                <label>Масштабирование</label>
+                <div class="shape-buttons">
+                    <button class="fit-btn active haptic-feedback" data-fit="cover">
+                        <span>🔲</span>
+                        <span>Заполнить</span>
+                    </button>
+                    <button class="fit-btn haptic-feedback" data-fit="contain">
+                        <span>🖼️</span>
+                        <span>Вместить</span>
+                    </button>
+                    <button class="fit-btn haptic-feedback" data-fit="stretch">
+                        <span>↔️</span>
+                        <span>Растянуть</span>
+                    </button>
+                </div>
+                <div class="fit-hint" style="margin-top: 8px; font-size: 12px; color: var(--tg-theme-hint-color, #999);">
+                    <span id="fitHint">Картинка заполнит всю область, сохраняя пропорции</span>
                 </div>
             </div>
             <div class="field">
@@ -582,6 +631,7 @@
         let currentLogoSize = 20;
         let currentQRBlob = null;
         let currentShape = 'circle'; // circle, rounded, square
+        let currentFit = 'cover'; // cover, contain, stretch
 
         // Haptic feedback при нажатиях
         document.querySelectorAll('.haptic-feedback').forEach(el => {
@@ -600,6 +650,33 @@
                 
                 document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.selectionChanged();
+                }
+                
+                if (qrcode && logoImage) {
+                    setTimeout(generateQR, 50);
+                }
+            });
+        });
+
+        // Выбор режима масштабирования
+        const fitHints = {
+            cover: 'Картинка заполнит всю область, сохраняя пропорции',
+            contain: 'Картинка поместится целиком с белыми полями',
+            stretch: 'Картинка растянется до квадрата (может исказиться)'
+        };
+
+        document.querySelectorAll('.fit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const fit = this.getAttribute('data-fit');
+                currentFit = fit;
+                
+                document.querySelectorAll('.fit-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.getElementById('fitHint').textContent = fitHints[fit];
                 
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.selectionChanged();
@@ -770,7 +847,32 @@
                 }
             } catch (error) {
                 console.error('QR generation error:', error);
-                tg.showAlert('Ошибка создания QR-кода!\n\nПопробуйте:\n• Сократить текст\n• Использовать простые символы\n• Проверить корректность данных');
+                
+                // Более понятное сообщение об ошибке
+                let errorMessage = 'Не удалось создать QR-код!\n\n';
+                
+                if (error.message && error.message.includes('code length overflow')) {
+                    errorMessage += '💡 Причины:\n';
+                    errorMessage += '• Текст содержит много случайных символов\n';
+                    errorMessage += '• Смешанные языки (русский + английский)\n';
+                    errorMessage += '• Специальные символы занимают больше места\n\n';
+                    errorMessage += '🔧 Решения:\n';
+                    errorMessage += '• Используйте только латиницу или только кириллицу\n';
+                    errorMessage += '• Сократите текст (сейчас ' + textBytes + ' байт)\n';
+                    errorMessage += '• Используйте ссылку вместо длинного текста\n';
+                    errorMessage += '• Попробуйте упростить текст';
+                } else {
+                    errorMessage += 'Попробуйте:\n';
+                    errorMessage += '• Сократить текст\n';
+                    errorMessage += '• Использовать простые символы\n';
+                    errorMessage += '• Проверить корректность данных';
+                }
+                
+                tg.showAlert(errorMessage);
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
             }
         }
 
@@ -794,13 +896,11 @@
             ctx.fillStyle = 'white';
             
             if (currentShape === 'circle') {
-                // Круг
                 const radius = logoSize / 2;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                 ctx.fill();
             } else if (currentShape === 'rounded') {
-                // Скруглённый квадрат
                 const x = centerX - logoSize / 2;
                 const y = centerY - logoSize / 2;
                 const radius = logoSize * 0.15;
@@ -818,7 +918,6 @@
                 ctx.closePath();
                 ctx.fill();
             } else {
-                // Квадрат
                 const x = centerX - logoSize / 2;
                 const y = centerY - logoSize / 2;
                 ctx.fillRect(x, y, logoSize, logoSize);
@@ -832,6 +931,7 @@
             img.onload = function() {
                 ctx.save();
                 
+                // Создаём клиппинг в зависимости от формы
                 if (currentShape === 'circle') {
                     const radius = logoSize / 2;
                     ctx.beginPath();
@@ -863,8 +963,36 @@
                     ctx.clip();
                 }
                 
-                const imgSize = logoSize - 10;
-                ctx.drawImage(img, centerX - (imgSize / 2), centerY - (imgSize / 2), imgSize, imgSize);
+                // Вычисляем размеры в зависимости от режима масштабирования
+                const targetSize = logoSize - 10;
+                const targetX = centerX - targetSize / 2;
+                const targetY = centerY - targetSize / 2;
+                
+                let drawX, drawY, drawWidth, drawHeight;
+                
+                if (currentFit === 'stretch') {
+                    // Растянуть до квадрата
+                    drawX = targetX;
+                    drawY = targetY;
+                    drawWidth = targetSize;
+                    drawHeight = targetSize;
+                } else if (currentFit === 'contain') {
+                    // Вместить целиком
+                    const scale = Math.min(targetSize / img.width, targetSize / img.height);
+                    drawWidth = img.width * scale;
+                    drawHeight = img.height * scale;
+                    drawX = centerX - drawWidth / 2;
+                    drawY = centerY - drawHeight / 2;
+                } else { // cover
+                    // Заполнить область
+                    const scale = Math.max(targetSize / img.width, targetSize / img.height);
+                    drawWidth = img.width * scale;
+                    drawHeight = img.height * scale;
+                    drawX = centerX - drawWidth / 2;
+                    drawY = centerY - drawHeight / 2;
+                }
+                
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
                 
                 ctx.restore();
             };
@@ -972,8 +1100,32 @@
                         ctx.clip();
                     }
                     
-                    const imgSize = logoSize - 10;
-                    ctx.drawImage(logoImg, centerX - (imgSize / 2), centerY - (imgSize / 2), imgSize, imgSize);
+                    const targetSize = logoSize - 10;
+                    const targetX = centerX - targetSize / 2;
+                    const targetY = centerY - targetSize / 2;
+                    
+                    let drawX, drawY, drawWidth, drawHeight;
+                    
+                    if (currentFit === 'stretch') {
+                        drawX = targetX;
+                        drawY = targetY;
+                        drawWidth = targetSize;
+                        drawHeight = targetSize;
+                    } else if (currentFit === 'contain') {
+                        const scale = Math.min(targetSize / logoImg.width, targetSize / logoImg.height);
+                        drawWidth = logoImg.width * scale;
+                        drawHeight = logoImg.height * scale;
+                        drawX = centerX - drawWidth / 2;
+                        drawY = centerY - drawHeight / 2;
+                    } else {
+                        const scale = Math.max(targetSize / logoImg.width, targetSize / logoImg.height);
+                        drawWidth = logoImg.width * scale;
+                        drawHeight = logoImg.height * scale;
+                        drawX = centerX - drawWidth / 2;
+                        drawY = centerY - drawHeight / 2;
+                    }
+                    
+                    ctx.drawImage(logoImg, drawX, drawY, drawWidth, drawHeight);
                     
                     ctx.restore();
                     
