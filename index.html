@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR code generator</title>
+    <title>QR Generator</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -455,10 +455,10 @@
         <div class="section">
             <div class="section-title">📝 Содержимое</div>
             <div class="help-text">
-                Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль — всё что угодно
+                Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль — всё что угодно. Максимум ~2900 символов
             </div>
             <div class="field">
-                <label for="qrText">Ссылка или текст</label>
+                <label for="qrText">Ссылка или текст <span id="charCounter" style="color: #999; font-weight: 400; font-size: 12px;">(0 / 2953 байт)</span></label>
                 <textarea id="qrText" placeholder="https://t.me/username">https://example.com</textarea>
             </div>
         </div>
@@ -625,6 +625,19 @@
         // Автоматическая перегенерация при изменении текста
         let textTimeout;
         document.getElementById('qrText').addEventListener('input', function() {
+            // Обновление счётчика символов
+            const textBytes = new TextEncoder().encode(this.value).length;
+            const counter = document.getElementById('charCounter');
+            counter.textContent = `(${textBytes} / 2953 байт)`;
+            
+            if (textBytes > 2953) {
+                counter.style.color = '#ff3b30';
+            } else if (textBytes > 2500) {
+                counter.style.color = '#ff9500';
+            } else {
+                counter.style.color = '#999';
+            }
+            
             clearTimeout(textTimeout);
             textTimeout = setTimeout(() => {
                 if (qrcode && this.value.trim()) {
@@ -722,28 +735,42 @@
                 return;
             }
 
-            qrcodeDiv.innerHTML = '';
+            // Проверка размера данных
+            const textBytes = new TextEncoder().encode(text).length;
+            const maxBytes = 2953; // Максимум для QR Level H
+            
+            if (textBytes > maxBytes) {
+                tg.showAlert(`Текст слишком длинный!\n\nМаксимум: ${maxBytes} байт\nВаш текст: ${textBytes} байт\n\nСократите текст на ${textBytes - maxBytes} байт`);
+                return;
+            }
 
-            qrcode = new QRCode(qrcodeDiv, {
-                text: text,
-                width: 300,
-                height: 300,
-                colorDark: colorDark,
-                colorLight: colorLight,
-                correctLevel: QRCode.CorrectLevel.H
-            });
+            try {
+                qrcodeDiv.innerHTML = '';
 
-            if (logoImage) {
-                setTimeout(() => {
-                    addLogoToQR();
+                qrcode = new QRCode(qrcodeDiv, {
+                    text: text,
+                    width: 300,
+                    height: 300,
+                    colorDark: colorDark,
+                    colorLight: colorLight,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                if (logoImage) {
+                    setTimeout(() => {
+                        addLogoToQR();
+                        if (tg.HapticFeedback) {
+                            tg.HapticFeedback.notificationOccurred('success');
+                        }
+                    }, 150);
+                } else {
                     if (tg.HapticFeedback) {
                         tg.HapticFeedback.notificationOccurred('success');
                     }
-                }, 150);
-            } else {
-                if (tg.HapticFeedback) {
-                    tg.HapticFeedback.notificationOccurred('success');
                 }
+            } catch (error) {
+                console.error('QR generation error:', error);
+                tg.showAlert('Ошибка создания QR-кода!\n\nПопробуйте:\n• Сократить текст\n• Использовать простые символы\n• Проверить корректность данных');
             }
         }
 
@@ -1010,6 +1037,10 @@
 
         // Генерация при загрузке
         generateQR();
+        
+        // Обновление счётчика при загрузке
+        const initialBytes = new TextEncoder().encode(document.getElementById('qrText').value).length;
+        document.getElementById('charCounter').textContent = `(${initialBytes} / 2953 байт)`;
 
         // Показываем, что приложение готово
         if (window.Telegram?.WebApp) {
