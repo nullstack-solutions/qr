@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QR Generator</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            padding-bottom: 20px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--tg-theme-section-separator-color, #e5e5ea);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .section {
+            background: var(--tg-theme-secondary-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 12px;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #999999);
+            line-height: 1.5;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: var(--tg-theme-bg-color, #f8f9fa);
+            border-radius: 8px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-section-separator-color, #d0d0d0);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            background: var(--tg-theme-bg-color, white);
+            color: var(--tg-theme-text-color, #000000);
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #007AFF);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .color-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .color-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid var(--tg-theme-section-separator-color, #d0d0d0);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, white);
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .color-info {
+            flex: 1;
+        }
+
+        .color-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #666);
+            margin-bottom: 2px;
+        }
+
+        .color-value {
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px;
+            border: 2px dashed var(--tg-theme-section-separator-color, #d0d0d0);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, #fafafa);
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #666);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-button:active {
+            opacity: 0.7;
+        }
+
+        .logo-preview {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-section-separator-color, #e0e0e0);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--tg-theme-bg-color, white);
+        }
+
+        .logo-preview img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .logo-info {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .logo-name {
+            color: var(--tg-theme-text-color, #000);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .logo-size-text {
+            color: var(--tg-theme-hint-color, #666);
+            font-size: 12px;
+        }
+
+        .remove-btn {
+            padding: 6px 12px;
+            background: var(--tg-theme-destructive-text-color, #ff3b30);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .slider-field {
+            padding: 12px;
+            border: 1px solid var(--tg-theme-section-separator-color, #e0e0e0);
+            border-radius: 8px;
+            background: var(--tg-theme-bg-color, white);
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .slider-label {
+            font-size: 14px;
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .slider-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--tg-theme-button-color, #007AFF);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--tg-theme-section-separator-color, #e0e0e0);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color, #007AFF);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color, #007AFF);
+            cursor: pointer;
+            border: none;
+        }
+
+        .qr-preview {
+            display: flex;
+            justify-content: center;
+            padding: 24px 16px;
+            background: var(--tg-theme-bg-color, #fafafa);
+            border-radius: 12px;
+        }
+
+        #qrcode {
+            position: relative;
+            display: inline-block;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        #qrcode canvas {
+            display: block !important;
+            border-radius: 4px;
+        }
+
+        #qrcode img {
+            display: none !important;
+        }
+
+        .button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .button:active {
+            opacity: 0.7;
+        }
+
+        .button-primary {
+            background: var(--tg-theme-button-color, #007AFF);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .button-success {
+            background: #34C759;
+            color: white;
+        }
+
+        .button-group {
+            display: grid;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .steps {
+            background: var(--tg-theme-secondary-bg-color, #fffbf0);
+            border: 1px solid var(--tg-theme-section-separator-color, #ffe4a3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+
+        .steps-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000);
+            margin-bottom: 12px;
+        }
+
+        .step {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--tg-theme-text-color, #333);
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--tg-theme-button-color, #ffcc00);
+            color: var(--tg-theme-button-text-color, #000);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .haptic-feedback {
+            user-select: none;
+        }
+
+        .shape-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .shape-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+            background: var(--tg-theme-bg-color, white);
+            border: 2px solid var(--tg-theme-section-separator-color, #e0e0e0);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--tg-theme-text-color, #666);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .shape-btn span:first-child {
+            font-size: 24px;
+        }
+
+        .shape-btn.active {
+            border-color: var(--tg-theme-button-color, #007AFF);
+            background: var(--tg-theme-button-color, #007AFF);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .shape-btn:active {
+            opacity: 0.7;
+        }
+
+        .fit-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 8px;
+            background: var(--tg-theme-bg-color, white);
+            border: 2px solid var(--tg-theme-section-separator-color, #e0e0e0);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--tg-theme-text-color, #666);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fit-btn span:first-child {
+            font-size: 24px;
+        }
+
+        .fit-btn.active {
+            border-color: var(--tg-theme-button-color, #007AFF);
+            background: var(--tg-theme-button-color, #007AFF);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .fit-btn:active {
+            opacity: 0.7;
+        }
+
+        @media (max-width: 640px) {
+            .color-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>QR Generator</h1>
+    </div>
+
+    <div class="container">
+        <div class="steps">
+            <div class="steps-title">Как использовать:</div>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>Введите ссылку или текст для QR-кода</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>Выберите цвета (чёрный на белом — самый надёжный)</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>Добавьте логотип: PNG или JPG, желательно квадратный, до 2 МБ</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div>Выберите форму (круг, скруглённый или квадрат) и размер области под логотип</div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div>Нажмите "Создать" и поделитесь или скачайте QR-код</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Содержимое</div>
+            <div class="help-text">
+                Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль. <strong>Важно:</strong> случайные символы и смешанные языки требуют больше места в QR-коде
+            </div>
+            <div class="field">
+                <label for="qrText">Ссылка или текст <span id="charCounter" style="color: #999; font-weight: 400; font-size: 12px;">(0 байт)</span></label>
+                <textarea id="qrText" placeholder="https://t.me/username">https://example.com</textarea>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎨 Цвета</div>
+            <div class="help-text">
+                Тёмный код на светлом фоне работает лучше всего
+            </div>
+            <div class="field">
+                <div class="color-row">
+                    <div class="color-field">
+                        <input type="color" id="colorDark" value="#000000">
+                        <div class="color-info">
+                            <div class="color-label">QR-код</div>
+                            <div class="color-value">#000000</div>
+                        </div>
+                    </div>
+                    <div class="color-field">
+                        <input type="color" id="colorLight" value="#ffffff">
+                        <div class="color-info">
+                            <div class="color-label">Фон</div>
+                            <div class="color-value">#ffffff</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📷 Логотип (необязательно)</div>
+            <div class="help-text">
+                PNG или JPG, квадратное изображение, до 2 МБ
+            </div>
+            <div class="field">
+                <div class="file-input-wrapper">
+                    <input type="file" id="logoInput" accept="image/png,image/jpeg,image/jpg">
+                    <div class="file-button haptic-feedback">
+                        <span>📁</span>
+                        <span id="fileName">Выбрать файл</span>
+                    </div>
+                </div>
+                <div id="logoPreviewContainer" style="display: none;">
+                    <div class="logo-preview">
+                        <img id="logoPreview">
+                        <div class="logo-info">
+                            <div class="logo-name" id="logoFileName"></div>
+                            <div class="logo-size-text" id="logoFileSize"></div>
+                        </div>
+                        <button class="remove-btn haptic-feedback" id="removeLogoBtn">Удалить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" id="logoSizeSection" style="display: none;">
+            <div class="section-title">📐 Настройки логотипа</div>
+            <div class="help-text">
+                Выберите форму, масштабирование и размер области под логотип
+            </div>
+            <div class="field">
+                <label>Форма</label>
+                <div class="shape-buttons">
+                    <button class="shape-btn active haptic-feedback" data-shape="circle">
+                        <span>⚪</span>
+                        <span>Круг</span>
+                    </button>
+                    <button class="shape-btn haptic-feedback" data-shape="rounded">
+                        <span>▢</span>
+                        <span>Скруглённый</span>
+                    </button>
+                    <button class="shape-btn haptic-feedback" data-shape="square">
+                        <span>◻️</span>
+                        <span>Квадрат</span>
+                    </button>
+                </div>
+            </div>
+            <div class="field" style="margin-top: 16px;">
+                <label>Масштабирование</label>
+                <div class="shape-buttons">
+                    <button class="fit-btn active haptic-feedback" data-fit="cover">
+                        <span>🔲</span>
+                        <span>Заполнить</span>
+                    </button>
+                    <button class="fit-btn haptic-feedback" data-fit="contain">
+                        <span>🖼️</span>
+                        <span>Вместить</span>
+                    </button>
+                    <button class="fit-btn haptic-feedback" data-fit="stretch">
+                        <span>↔️</span>
+                        <span>Растянуть</span>
+                    </button>
+                </div>
+                <div class="fit-hint" style="margin-top: 8px; font-size: 12px; color: var(--tg-theme-hint-color, #999);">
+                    <span id="fitHint">Картинка заполнит всю область, сохраняя пропорции</span>
+                </div>
+            </div>
+            <div class="field">
+                <div class="slider-field">
+                    <div class="slider-header">
+                        <span class="slider-label">Размер</span>
+                        <span class="slider-value"><span id="logoSizeValue">15</span>%</span>
+                    </div>
+                    <input type="range" id="logoSize" min="10" max="15" value="15">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Предварительный просмотр</div>
+            <div class="qr-preview">
+                <div id="qrcode"></div>
+            </div>
+            <div class="button-group">
+                <button class="button button-primary haptic-feedback" id="generateBtn">Создать QR-код</button>
+                <button class="button button-success haptic-feedback" id="shareBtn">Поделиться / Скачать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram WebApp (с проверкой)
+        const tg = window.Telegram?.WebApp || {
+            expand: () => {},
+            enableClosingConfirmation: () => {},
+            ready: () => {},
+            HapticFeedback: null,
+            showAlert: (msg) => alert(msg),
+            showPopup: (config) => alert(config.message),
+            close: () => {}
+        };
+
+        // Если в Telegram - включаем фичи
+        if (window.Telegram?.WebApp) {
+            tg.expand();
+            tg.enableClosingConfirmation();
+        }
+
+        let qrcode = null;
+        let logoImage = null;
+        let currentLogoSize = 15;
+        let currentQRBlob = null;
+        let currentShape = 'circle'; // circle, rounded, square
+        let currentFit = 'cover'; // cover, contain, stretch
+        let lastQRText = '';
+
+        const EXPORT_SIZE = 900;
+
+        function toLatin1Bytes(value) {
+            const encoder = new TextEncoder();
+            const utf8 = encoder.encode(value);
+            let out = '';
+            for (const byte of utf8) {
+                out += String.fromCharCode(byte);
+            }
+            return out;
+        }
+
+        function getCurrentColors() {
+            return {
+                dark: document.getElementById('colorDark').value,
+                light: document.getElementById('colorLight').value
+            };
+        }
+
+        function hexToRgb(hex) {
+            const normalized = hex.replace('#', '');
+            const bigint = parseInt(normalized, 16);
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255
+            };
+        }
+
+        function getLuminance(hexColor) {
+            const { r, g, b } = hexToRgb(hexColor);
+            const channel = [r, g, b].map((value) => {
+                const normalized = value / 255;
+                return normalized <= 0.03928
+                    ? normalized / 12.92
+                    : Math.pow((normalized + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * channel[0] + 0.7152 * channel[1] + 0.0722 * channel[2];
+        }
+
+        function updateCharCounter(value) {
+            const bytes = new TextEncoder().encode(value).length;
+            const counter = document.getElementById('charCounter');
+            counter.textContent = `(${bytes} байт)`;
+
+            if (bytes > 1300) {
+                counter.style.color = '#ff3b30';
+            } else if (bytes > 1000) {
+                counter.style.color = '#ff9500';
+            } else {
+                counter.style.color = '#999';
+            }
+        }
+
+        function generateQRToCanvas(size, text, colors) {
+            return new Promise((resolve, reject) => {
+                const container = document.createElement('div');
+                container.style.position = 'absolute';
+                container.style.left = '-9999px';
+                container.style.top = '-9999px';
+                document.body.appendChild(container);
+
+                const data = toLatin1Bytes(text);
+
+                const qr = new QRCode(container, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    colorDark: colors.dark,
+                    colorLight: colors.light,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                requestAnimationFrame(() => {
+                    const canvas = container.querySelector('canvas');
+                    if (!canvas) {
+                        document.body.removeChild(container);
+                        reject(new Error('Не удалось создать QR-код для экспорта'));
+                        return;
+                    }
+
+                    const moduleCount = qr._oQRCode?.moduleCount || size;
+                    const moduleSize = size / moduleCount;
+                    const quietZone = Math.ceil(moduleSize * 4);
+
+                    const exportCanvas = document.createElement('canvas');
+                    exportCanvas.width = size + quietZone * 2;
+                    exportCanvas.height = size + quietZone * 2;
+
+                    const ctx = exportCanvas.getContext('2d');
+                    ctx.fillStyle = colors.light;
+                    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                    ctx.drawImage(canvas, quietZone, quietZone);
+
+                    document.body.removeChild(container);
+
+                    resolve({
+                        canvas: exportCanvas,
+                        quietZone,
+                        qrSize: size
+                    });
+                });
+            });
+        }
+
+        // Haptic feedback при нажатиях
+        document.querySelectorAll('.haptic-feedback').forEach(el => {
+            el.addEventListener('click', () => {
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+            });
+        });
+
+        // Выбор формы логотипа
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const shape = this.getAttribute('data-shape');
+                currentShape = shape;
+                
+                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.selectionChanged();
+                }
+                
+                if (qrcode && logoImage) {
+                    setTimeout(generateQR, 50);
+                }
+            });
+        });
+
+        // Выбор режима масштабирования
+        const fitHints = {
+            cover: 'Картинка заполнит всю область, сохраняя пропорции',
+            contain: 'Картинка поместится целиком с белыми полями',
+            stretch: 'Картинка растянется до квадрата (может исказиться)'
+        };
+
+        document.querySelectorAll('.fit-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const fit = this.getAttribute('data-fit');
+                currentFit = fit;
+                
+                document.querySelectorAll('.fit-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.getElementById('fitHint').textContent = fitHints[fit];
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.selectionChanged();
+                }
+                
+                if (qrcode && logoImage) {
+                    setTimeout(generateQR, 50);
+                }
+            });
+        });
+
+        // Удаление логотипа
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'removeLogoBtn' || e.target.closest('#removeLogoBtn')) {
+                removeLogo();
+            }
+        });
+
+        // Кнопки генерации и шеринга
+        document.getElementById('generateBtn').addEventListener('click', generateQR);
+        document.getElementById('shareBtn').addEventListener('click', shareOrDownload);
+
+        // Автоматическая перегенерация при изменении текста
+        let textTimeout;
+        document.getElementById('qrText').addEventListener('input', function() {
+            updateCharCounter(this.value);
+            clearTimeout(textTimeout);
+            textTimeout = setTimeout(() => {
+                if (qrcode && this.value.trim()) {
+                    generateQR();
+                }
+            }, 500); // Задержка 500мс после окончания ввода
+        });
+
+        // Обработка выбора файла
+        document.getElementById('logoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    tg.showAlert('Файл слишком большой! Максимум 2 МБ');
+                    this.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    logoImage = event.target.result;
+                    const preview = document.getElementById('logoPreview');
+                    preview.src = logoImage;
+                    
+                    document.getElementById('logoFileName').textContent = file.name;
+                    document.getElementById('logoFileSize').textContent = formatFileSize(file.size);
+                    document.getElementById('logoPreviewContainer').style.display = 'block';
+                    document.getElementById('logoSizeSection').style.display = 'block';
+                    
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                    
+                    if (qrcode) {
+                        setTimeout(generateQR, 100);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' байт';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+        }
+
+        function removeLogo() {
+            logoImage = null;
+            document.getElementById('logoInput').value = '';
+            document.getElementById('logoPreviewContainer').style.display = 'none';
+            document.getElementById('logoSizeSection').style.display = 'none';
+            
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('warning');
+            }
+            
+            if (qrcode) {
+                generateQR();
+            }
+        }
+
+        // Обновление значений цветов
+        document.getElementById('colorDark').addEventListener('input', function(e) {
+            e.target.nextElementSibling.querySelector('.color-value').textContent = e.target.value;
+            if (qrcode) {
+                setTimeout(generateQR, 100);
+            }
+        });
+
+        document.getElementById('colorLight').addEventListener('input', function(e) {
+            e.target.nextElementSibling.querySelector('.color-value').textContent = e.target.value;
+            if (qrcode) {
+                setTimeout(generateQR, 100);
+            }
+        });
+
+        // Обновление размера логотипа
+        document.getElementById('logoSize').addEventListener('input', function(e) {
+            currentLogoSize = Math.min(parseInt(e.target.value, 10) || 0, 15);
+            if (currentLogoSize !== parseInt(e.target.value, 10)) {
+                e.target.value = currentLogoSize;
+            }
+            document.getElementById('logoSizeValue').textContent = currentLogoSize;
+            if (qrcode && logoImage) {
+                setTimeout(generateQR, 100);
+            }
+        });
+
+        function generateQR() {
+            const rawValue = document.getElementById('qrText').value;
+            const text = rawValue.trim();
+            const colors = getCurrentColors();
+            const qrcodeDiv = document.getElementById('qrcode');
+
+            updateCharCounter(rawValue);
+
+            if (!text) {
+                tg.showAlert('Введите ссылку или текст!');
+                return;
+            }
+
+            if (getLuminance(colors.light) < 0.9) {
+                tg.showAlert('Фон слишком тёмный для надёжного сканирования. Выберите более светлый цвет.');
+                document.getElementById('colorLight').value = '#ffffff';
+                document.getElementById('colorLight').dispatchEvent(new Event('input'));
+                return;
+            }
+
+            const textBytes = new TextEncoder().encode(text).length;
+            const maxBytes = 2953; // фактический предел уровня H
+
+            if (textBytes > maxBytes) {
+                tg.showAlert(`Текст слишком длинный для уровня коррекции H.\n\nМаксимально надёжно сканируется до ~${maxBytes} байт.\nВаш текст: ${textBytes} байт.`);
+                return;
+            }
+
+            try {
+                qrcodeDiv.innerHTML = '';
+
+                const data = toLatin1Bytes(text);
+
+                qrcode = new QRCode(qrcodeDiv, {
+                    text: data,
+                    width: 300,
+                    height: 300,
+                    colorDark: colors.dark,
+                    colorLight: colors.light,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                lastQRText = text;
+
+                if (logoImage) {
+                    setTimeout(() => {
+                        addLogoToQR();
+                        if (tg.HapticFeedback) {
+                            tg.HapticFeedback.notificationOccurred('success');
+                        }
+                    }, 150);
+                } else {
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                }
+            } catch (error) {
+                console.error('QR generation error:', error);
+                
+                // Более понятное сообщение об ошибке
+                let errorMessage = 'Не удалось создать QR-код!\n\n';
+                
+                if (error.message && error.message.includes('code length overflow')) {
+                    errorMessage += '💡 Причины:\n';
+                    errorMessage += '• Текст содержит много случайных символов\n';
+                    errorMessage += '• Много спецсимволов или эмодзи\n\n';
+                    errorMessage += '🔧 Решения:\n';
+                    errorMessage += '• Сократите текст (сейчас ' + textBytes + ' байт)\n';
+                    errorMessage += '• Удалите лишние спецсимволы\n';
+                    errorMessage += '• Используйте короткую ссылку вместо длинного текста\n';
+                    errorMessage += '• Разделите данные на несколько QR-кодов';
+                } else {
+                    errorMessage += 'Попробуйте:\n';
+                    errorMessage += '• Сократить текст\n';
+                    errorMessage += '• Использовать простые символы\n';
+                    errorMessage += '• Проверить корректность данных';
+                }
+                
+                tg.showAlert(errorMessage);
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        }
+
+        function addLogoToQR() {
+            const qrcodeDiv = document.getElementById('qrcode');
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (!canvas || !logoImage) return;
+
+            const ctx = canvas.getContext('2d');
+            const qrSize = canvas.width;
+            const safeLogoSize = Math.min(currentLogoSize, 15);
+            const logoSize = Math.floor(qrSize * (safeLogoSize / 100));
+            const centerX = qrSize / 2;
+            const centerY = qrSize / 2;
+            const colors = getCurrentColors();
+
+            // Тень
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 2;
+
+            ctx.fillStyle = colors.light;
+            
+            if (currentShape === 'circle') {
+                const radius = logoSize / 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (currentShape === 'rounded') {
+                const x = centerX - logoSize / 2;
+                const y = centerY - logoSize / 2;
+                const radius = logoSize * 0.15;
+                
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + logoSize - radius, y);
+                ctx.quadraticCurveTo(x + logoSize, y, x + logoSize, y + radius);
+                ctx.lineTo(x + logoSize, y + logoSize - radius);
+                ctx.quadraticCurveTo(x + logoSize, y + logoSize, x + logoSize - radius, y + logoSize);
+                ctx.lineTo(x + radius, y + logoSize);
+                ctx.quadraticCurveTo(x, y + logoSize, x, y + logoSize - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                const x = centerX - logoSize / 2;
+                const y = centerY - logoSize / 2;
+                ctx.fillRect(x, y, logoSize, logoSize);
+            }
+            
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+
+            // Логотип
+            const img = new Image();
+            img.onload = function() {
+                ctx.save();
+                
+                // Создаём клиппинг в зависимости от формы
+                if (currentShape === 'circle') {
+                    const radius = logoSize / 2;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
+                    ctx.clip();
+                } else if (currentShape === 'rounded') {
+                    const x = centerX - logoSize / 2 + 5;
+                    const y = centerY - logoSize / 2 + 5;
+                    const size = logoSize - 10;
+                    const radius = size * 0.15;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.lineTo(x + size - radius, y);
+                    ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                    ctx.lineTo(x + size, y + size - radius);
+                    ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                    ctx.lineTo(x + radius, y + size);
+                    ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                    ctx.lineTo(x, y + radius);
+                    ctx.quadraticCurveTo(x, y, x + radius, y);
+                    ctx.closePath();
+                    ctx.clip();
+                } else {
+                    const x = centerX - logoSize / 2 + 5;
+                    const y = centerY - logoSize / 2 + 5;
+                    const size = logoSize - 10;
+                    ctx.rect(x, y, size, size);
+                    ctx.clip();
+                }
+                
+                // Вычисляем размеры в зависимости от режима масштабирования
+                const targetSize = logoSize - 10;
+                const targetX = centerX - targetSize / 2;
+                const targetY = centerY - targetSize / 2;
+                
+                let drawX, drawY, drawWidth, drawHeight;
+                
+                if (currentFit === 'stretch') {
+                    // Растянуть до квадрата
+                    drawX = targetX;
+                    drawY = targetY;
+                    drawWidth = targetSize;
+                    drawHeight = targetSize;
+                } else if (currentFit === 'contain') {
+                    // Вместить целиком
+                    const scale = Math.min(targetSize / img.width, targetSize / img.height);
+                    drawWidth = img.width * scale;
+                    drawHeight = img.height * scale;
+                    drawX = centerX - drawWidth / 2;
+                    drawY = centerY - drawHeight / 2;
+                } else { // cover
+                    // Заполнить область
+                    const scale = Math.max(targetSize / img.width, targetSize / img.height);
+                    drawWidth = img.width * scale;
+                    drawHeight = img.height * scale;
+                    drawX = centerX - drawWidth / 2;
+                    drawY = centerY - drawHeight / 2;
+                }
+                
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                
+                ctx.restore();
+            };
+            img.src = logoImage;
+        }
+
+        async function shareOrDownload() {
+            const text = (lastQRText || document.getElementById('qrText').value).trim();
+
+            if (!text) {
+                tg.showAlert('Сначала создайте QR-код!');
+                return;
+            }
+
+            const colors = getCurrentColors();
+
+            if (getLuminance(colors.light) < 0.9) {
+                tg.showAlert('Фон слишком тёмный для надёжного сканирования. Выберите более светлый цвет.');
+                return;
+            }
+
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+
+            try {
+                const { canvas: finalCanvas, quietZone, qrSize } = await generateQRToCanvas(EXPORT_SIZE, text, colors);
+                const ctx = finalCanvas.getContext('2d');
+
+                if (logoImage) {
+                    await new Promise((resolve) => {
+                        const logoImg = new Image();
+                        logoImg.onload = async () => {
+                            const safeLogoSize = Math.min(currentLogoSize, 15);
+                            const logoSize = Math.floor(qrSize * (safeLogoSize / 100));
+                            const centerX = quietZone + qrSize / 2;
+                            const centerY = quietZone + qrSize / 2;
+
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowOffsetX = 0;
+                            ctx.shadowOffsetY = 2;
+
+                            ctx.fillStyle = colors.light;
+
+                            if (currentShape === 'circle') {
+                                const radius = logoSize / 2;
+                                ctx.beginPath();
+                                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else if (currentShape === 'rounded') {
+                                const x = centerX - logoSize / 2;
+                                const y = centerY - logoSize / 2;
+                                const radius = logoSize * 0.15;
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + radius, y);
+                                ctx.lineTo(x + logoSize - radius, y);
+                                ctx.quadraticCurveTo(x + logoSize, y, x + logoSize, y + radius);
+                                ctx.lineTo(x + logoSize, y + logoSize - radius);
+                                ctx.quadraticCurveTo(x + logoSize, y + logoSize, x + logoSize - radius, y + logoSize);
+                                ctx.lineTo(x + radius, y + logoSize);
+                                ctx.quadraticCurveTo(x, y + logoSize, x, y + logoSize - radius);
+                                ctx.lineTo(x, y + radius);
+                                ctx.quadraticCurveTo(x, y, x + radius, y);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else {
+                                const x = centerX - logoSize / 2;
+                                const y = centerY - logoSize / 2;
+                                ctx.fillRect(x, y, logoSize, logoSize);
+                            }
+
+                            ctx.shadowColor = 'transparent';
+                            ctx.shadowBlur = 0;
+
+                            ctx.save();
+
+                            if (currentShape === 'circle') {
+                                const radius = logoSize / 2;
+                                ctx.beginPath();
+                                ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
+                                ctx.clip();
+                            } else if (currentShape === 'rounded') {
+                                const x = centerX - logoSize / 2 + 5;
+                                const y = centerY - logoSize / 2 + 5;
+                                const size = logoSize - 10;
+                                const radius = size * 0.15;
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + radius, y);
+                                ctx.lineTo(x + size - radius, y);
+                                ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                                ctx.lineTo(x + size, y + size - radius);
+                                ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                                ctx.lineTo(x + radius, y + size);
+                                ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                                ctx.lineTo(x, y + radius);
+                                ctx.quadraticCurveTo(x, y, x + radius, y);
+                                ctx.closePath();
+                                ctx.clip();
+                            } else {
+                                const x = centerX - logoSize / 2 + 5;
+                                const y = centerY - logoSize / 2 + 5;
+                                const size = logoSize - 10;
+                                ctx.rect(x, y, size, size);
+                                ctx.clip();
+                            }
+
+                            const targetSize = logoSize - 10;
+                            const targetX = centerX - targetSize / 2;
+                            const targetY = centerY - targetSize / 2;
+
+                            let drawX, drawY, drawWidth, drawHeight;
+
+                            if (currentFit === 'stretch') {
+                                drawX = targetX;
+                                drawY = targetY;
+                                drawWidth = targetSize;
+                                drawHeight = targetSize;
+                            } else if (currentFit === 'contain') {
+                                const scale = Math.min(targetSize / logoImg.width, targetSize / logoImg.height);
+                                drawWidth = logoImg.width * scale;
+                                drawHeight = logoImg.height * scale;
+                                drawX = centerX - drawWidth / 2;
+                                drawY = centerY - drawHeight / 2;
+                            } else {
+                                const scale = Math.max(targetSize / logoImg.width, targetSize / logoImg.height);
+                                drawWidth = logoImg.width * scale;
+                                drawHeight = logoImg.height * scale;
+                                drawX = centerX - drawWidth / 2;
+                                drawY = centerY - drawHeight / 2;
+                            }
+
+                            ctx.drawImage(logoImg, drawX, drawY, drawWidth, drawHeight);
+
+                            ctx.restore();
+
+                            resolve();
+                        };
+                        logoImg.onerror = () => {
+                            tg.showAlert('Не удалось загрузить логотип для экспорта.');
+                            resolve();
+                        };
+                        logoImg.src = logoImage;
+                    });
+                }
+
+                await processCanvas(finalCanvas);
+            } catch (error) {
+                console.error('QR export error:', error);
+                tg.showAlert('Не удалось подготовить файл для сохранения. Попробуйте ещё раз.');
+            }
+        }
+
+        async function processCanvas(canvas) {
+            canvas.toBlob(async (blob) => {
+                currentQRBlob = blob;
+                
+                // Попытка использовать Web Share API (работает на мобильных)
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'qrcode.png', { type: 'image/png' })] })) {
+                    try {
+                        const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+                        await navigator.share({
+                            files: [file],
+                            title: 'QR Code',
+                            text: 'Мой QR-код'
+                        });
+                        if (tg.HapticFeedback) {
+                            tg.HapticFeedback.notificationOccurred('success');
+                        }
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            downloadBlob(blob);
+                        }
+                    }
+                } else {
+                    // Fallback: скачивание
+                    downloadBlob(blob);
+                }
+            }, 'image/png', 1.0);
+        }
+
+        function downloadBlob(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `qrcode-${timestamp}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+            
+            tg.showPopup({
+                title: 'Готово!',
+                message: 'QR-код сохранён в галерею',
+                buttons: [{type: 'ok'}]
+            });
+        }
+
+        // Генерация при загрузке
+        generateQR();
+        
+        // Обновление счётчика при загрузке
+        updateCharCounter(document.getElementById('qrText').value);
+
+        // Показываем, что приложение готово
+        if (window.Telegram?.WebApp?.ready) {
+            window.Telegram.WebApp.ready();
+        }
+    </script>
+</body>
+</html>
