@@ -487,7 +487,7 @@
                 Ссылка на сайт, Telegram канал, меню ресторана, контакт, WiFi пароль. <strong>Важно:</strong> случайные символы и смешанные языки требуют больше места в QR-коде
             </div>
             <div class="field">
-                <label for="qrText">Ссылка или текст <span id="charCounter" style="color: #999; font-weight: 400; font-size: 12px;">(0 / 2953 байт)</span></label>
+                <label for="qrText">Ссылка или текст <span id="charCounter" style="color: #999; font-weight: 400; font-size: 12px;">(0 байт)</span></label>
                 <textarea id="qrText" placeholder="https://t.me/username">https://example.com</textarea>
             </div>
         </div>
@@ -589,9 +589,9 @@
                 <div class="slider-field">
                     <div class="slider-header">
                         <span class="slider-label">Размер</span>
-                        <span class="slider-value"><span id="logoSizeValue">20</span>%</span>
+                        <span class="slider-value"><span id="logoSizeValue">15</span>%</span>
                     </div>
-                    <input type="range" id="logoSize" min="10" max="30" value="20">
+                    <input type="range" id="logoSize" min="10" max="15" value="15">
                 </div>
             </div>
         </div>
@@ -619,7 +619,7 @@
             showPopup: (config) => alert(config.message),
             close: () => {}
         };
-        
+
         // Если в Telegram - включаем фичи
         if (window.Telegram?.WebApp) {
             tg.expand();
@@ -628,10 +628,116 @@
 
         let qrcode = null;
         let logoImage = null;
-        let currentLogoSize = 20;
+        let currentLogoSize = 15;
         let currentQRBlob = null;
         let currentShape = 'circle'; // circle, rounded, square
         let currentFit = 'cover'; // cover, contain, stretch
+        let lastQRText = '';
+
+        const EXPORT_SIZE = 900;
+
+        function toLatin1Bytes(value) {
+            const encoder = new TextEncoder();
+            const utf8 = encoder.encode(value);
+            let out = '';
+            for (const byte of utf8) {
+                out += String.fromCharCode(byte);
+            }
+            return out;
+        }
+
+        function getCurrentColors() {
+            return {
+                dark: document.getElementById('colorDark').value,
+                light: document.getElementById('colorLight').value
+            };
+        }
+
+        function hexToRgb(hex) {
+            const normalized = hex.replace('#', '');
+            const bigint = parseInt(normalized, 16);
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255
+            };
+        }
+
+        function getLuminance(hexColor) {
+            const { r, g, b } = hexToRgb(hexColor);
+            const channel = [r, g, b].map((value) => {
+                const normalized = value / 255;
+                return normalized <= 0.03928
+                    ? normalized / 12.92
+                    : Math.pow((normalized + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * channel[0] + 0.7152 * channel[1] + 0.0722 * channel[2];
+        }
+
+        function updateCharCounter(value) {
+            const bytes = new TextEncoder().encode(value).length;
+            const counter = document.getElementById('charCounter');
+            counter.textContent = `(${bytes} байт)`;
+
+            if (bytes > 1300) {
+                counter.style.color = '#ff3b30';
+            } else if (bytes > 1000) {
+                counter.style.color = '#ff9500';
+            } else {
+                counter.style.color = '#999';
+            }
+        }
+
+        function generateQRToCanvas(size, text, colors) {
+            return new Promise((resolve, reject) => {
+                const container = document.createElement('div');
+                container.style.position = 'absolute';
+                container.style.left = '-9999px';
+                container.style.top = '-9999px';
+                document.body.appendChild(container);
+
+                const data = toLatin1Bytes(text);
+
+                const qr = new QRCode(container, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    colorDark: colors.dark,
+                    colorLight: colors.light,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                requestAnimationFrame(() => {
+                    const canvas = container.querySelector('canvas');
+                    if (!canvas) {
+                        document.body.removeChild(container);
+                        reject(new Error('Не удалось создать QR-код для экспорта'));
+                        return;
+                    }
+
+                    const moduleCount = qr._oQRCode?.moduleCount || size;
+                    const moduleSize = size / moduleCount;
+                    const quietZone = Math.ceil(moduleSize * 4);
+
+                    const exportCanvas = document.createElement('canvas');
+                    exportCanvas.width = size + quietZone * 2;
+                    exportCanvas.height = size + quietZone * 2;
+
+                    const ctx = exportCanvas.getContext('2d');
+                    ctx.fillStyle = colors.light;
+                    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                    ctx.drawImage(canvas, quietZone, quietZone);
+
+                    document.body.removeChild(container);
+
+                    resolve({
+                        canvas: exportCanvas,
+                        quietZone,
+                        qrSize: size
+                    });
+                });
+            });
+        }
 
         // Haptic feedback при нажатиях
         document.querySelectorAll('.haptic-feedback').forEach(el => {
@@ -702,19 +808,7 @@
         // Автоматическая перегенерация при изменении текста
         let textTimeout;
         document.getElementById('qrText').addEventListener('input', function() {
-            // Обновление счётчика символов
-            const textBytes = new TextEncoder().encode(this.value).length;
-            const counter = document.getElementById('charCounter');
-            counter.textContent = `(${textBytes} / 2953 байт)`;
-            
-            if (textBytes > 2953) {
-                counter.style.color = '#ff3b30';
-            } else if (textBytes > 2500) {
-                counter.style.color = '#ff9500';
-            } else {
-                counter.style.color = '#999';
-            }
-            
+            updateCharCounter(this.value);
             clearTimeout(textTimeout);
             textTimeout = setTimeout(() => {
                 if (qrcode && this.value.trim()) {
@@ -794,7 +888,10 @@
 
         // Обновление размера логотипа
         document.getElementById('logoSize').addEventListener('input', function(e) {
-            currentLogoSize = parseInt(e.target.value);
+            currentLogoSize = Math.min(parseInt(e.target.value, 10) || 0, 15);
+            if (currentLogoSize !== parseInt(e.target.value, 10)) {
+                e.target.value = currentLogoSize;
+            }
             document.getElementById('logoSizeValue').textContent = currentLogoSize;
             if (qrcode && logoImage) {
                 setTimeout(generateQR, 100);
@@ -802,36 +899,48 @@
         });
 
         function generateQR() {
-            const text = document.getElementById('qrText').value.trim();
-            const colorDark = document.getElementById('colorDark').value;
-            const colorLight = document.getElementById('colorLight').value;
+            const rawValue = document.getElementById('qrText').value;
+            const text = rawValue.trim();
+            const colors = getCurrentColors();
             const qrcodeDiv = document.getElementById('qrcode');
+
+            updateCharCounter(rawValue);
 
             if (!text) {
                 tg.showAlert('Введите ссылку или текст!');
                 return;
             }
 
-            // Проверка размера данных
+            if (getLuminance(colors.light) < 0.9) {
+                tg.showAlert('Фон слишком тёмный для надёжного сканирования. Выберите более светлый цвет.');
+                document.getElementById('colorLight').value = '#ffffff';
+                document.getElementById('colorLight').dispatchEvent(new Event('input'));
+                return;
+            }
+
             const textBytes = new TextEncoder().encode(text).length;
-            const maxBytes = 2953; // Максимум для QR Level H
-            
+            const maxBytes = 2953; // фактический предел уровня H
+
             if (textBytes > maxBytes) {
-                tg.showAlert(`Текст слишком длинный!\n\nМаксимум: ${maxBytes} байт\nВаш текст: ${textBytes} байт\n\nСократите текст на ${textBytes - maxBytes} байт`);
+                tg.showAlert(`Текст слишком длинный для уровня коррекции H.\n\nМаксимально надёжно сканируется до ~${maxBytes} байт.\nВаш текст: ${textBytes} байт.`);
                 return;
             }
 
             try {
                 qrcodeDiv.innerHTML = '';
 
+                const data = toLatin1Bytes(text);
+
                 qrcode = new QRCode(qrcodeDiv, {
-                    text: text,
+                    text: data,
                     width: 300,
                     height: 300,
-                    colorDark: colorDark,
-                    colorLight: colorLight,
+                    colorDark: colors.dark,
+                    colorLight: colors.light,
                     correctLevel: QRCode.CorrectLevel.H
                 });
+
+                lastQRText = text;
 
                 if (logoImage) {
                     setTimeout(() => {
@@ -854,13 +963,12 @@
                 if (error.message && error.message.includes('code length overflow')) {
                     errorMessage += '💡 Причины:\n';
                     errorMessage += '• Текст содержит много случайных символов\n';
-                    errorMessage += '• Смешанные языки (русский + английский)\n';
-                    errorMessage += '• Специальные символы занимают больше места\n\n';
+                    errorMessage += '• Много спецсимволов или эмодзи\n\n';
                     errorMessage += '🔧 Решения:\n';
-                    errorMessage += '• Используйте только латиницу или только кириллицу\n';
                     errorMessage += '• Сократите текст (сейчас ' + textBytes + ' байт)\n';
-                    errorMessage += '• Используйте ссылку вместо длинного текста\n';
-                    errorMessage += '• Попробуйте упростить текст';
+                    errorMessage += '• Удалите лишние спецсимволы\n';
+                    errorMessage += '• Используйте короткую ссылку вместо длинного текста\n';
+                    errorMessage += '• Разделите данные на несколько QR-кодов';
                 } else {
                     errorMessage += 'Попробуйте:\n';
                     errorMessage += '• Сократить текст\n';
@@ -883,17 +991,19 @@
 
             const ctx = canvas.getContext('2d');
             const qrSize = canvas.width;
-            const logoSize = Math.floor(qrSize * (currentLogoSize / 100));
+            const safeLogoSize = Math.min(currentLogoSize, 15);
+            const logoSize = Math.floor(qrSize * (safeLogoSize / 100));
             const centerX = qrSize / 2;
             const centerY = qrSize / 2;
+            const colors = getCurrentColors();
 
             // Тень
             ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
             ctx.shadowBlur = 8;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 2;
-            
-            ctx.fillStyle = 'white';
+
+            ctx.fillStyle = colors.light;
             
             if (currentShape === 'circle') {
                 const radius = logoSize / 2;
@@ -1000,11 +1110,17 @@
         }
 
         async function shareOrDownload() {
-            const qrcodeDiv = document.getElementById('qrcode');
-            const canvas = qrcodeDiv.querySelector('canvas');
-            
-            if (!canvas) {
+            const text = (lastQRText || document.getElementById('qrText').value).trim();
+
+            if (!text) {
                 tg.showAlert('Сначала создайте QR-код!');
+                return;
+            }
+
+            const colors = getCurrentColors();
+
+            if (getLuminance(colors.light) < 0.9) {
+                tg.showAlert('Фон слишком тёмный для надёжного сканирования. Выберите более светлый цвет.');
                 return;
             }
 
@@ -1012,128 +1128,133 @@
                 tg.HapticFeedback.impactOccurred('medium');
             }
 
-            const scale = 3;
-            const finalCanvas = document.createElement('canvas');
-            const ctx = finalCanvas.getContext('2d');
-            finalCanvas.width = canvas.width * scale;
-            finalCanvas.height = canvas.height * scale;
+            try {
+                const { canvas: finalCanvas, quietZone, qrSize } = await generateQRToCanvas(EXPORT_SIZE, text, colors);
+                const ctx = finalCanvas.getContext('2d');
 
-            ctx.scale(scale, scale);
-            ctx.drawImage(canvas, 0, 0);
+                if (logoImage) {
+                    await new Promise((resolve) => {
+                        const logoImg = new Image();
+                        logoImg.onload = async () => {
+                            const safeLogoSize = Math.min(currentLogoSize, 15);
+                            const logoSize = Math.floor(qrSize * (safeLogoSize / 100));
+                            const centerX = quietZone + qrSize / 2;
+                            const centerY = quietZone + qrSize / 2;
 
-            if (logoImage) {
-                const logoImg = new Image();
-                logoImg.onload = async function() {
-                    const qrSize = canvas.width;
-                    const logoSize = Math.floor(qrSize * (currentLogoSize / 100));
-                    const centerX = qrSize / 2;
-                    const centerY = qrSize / 2;
-                    
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 2;
-                    
-                    ctx.fillStyle = 'white';
-                    
-                    if (currentShape === 'circle') {
-                        const radius = logoSize / 2;
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                        ctx.fill();
-                    } else if (currentShape === 'rounded') {
-                        const x = centerX - logoSize / 2;
-                        const y = centerY - logoSize / 2;
-                        const radius = logoSize * 0.15;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x + radius, y);
-                        ctx.lineTo(x + logoSize - radius, y);
-                        ctx.quadraticCurveTo(x + logoSize, y, x + logoSize, y + radius);
-                        ctx.lineTo(x + logoSize, y + logoSize - radius);
-                        ctx.quadraticCurveTo(x + logoSize, y + logoSize, x + logoSize - radius, y + logoSize);
-                        ctx.lineTo(x + radius, y + logoSize);
-                        ctx.quadraticCurveTo(x, y + logoSize, x, y + logoSize - radius);
-                        ctx.lineTo(x, y + radius);
-                        ctx.quadraticCurveTo(x, y, x + radius, y);
-                        ctx.closePath();
-                        ctx.fill();
-                    } else {
-                        const x = centerX - logoSize / 2;
-                        const y = centerY - logoSize / 2;
-                        ctx.fillRect(x, y, logoSize, logoSize);
-                    }
-                    
-                    ctx.shadowColor = 'transparent';
-                    ctx.shadowBlur = 0;
-                    
-                    ctx.save();
-                    
-                    if (currentShape === 'circle') {
-                        const radius = logoSize / 2;
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
-                        ctx.clip();
-                    } else if (currentShape === 'rounded') {
-                        const x = centerX - logoSize / 2 + 5;
-                        const y = centerY - logoSize / 2 + 5;
-                        const size = logoSize - 10;
-                        const radius = size * 0.15;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x + radius, y);
-                        ctx.lineTo(x + size - radius, y);
-                        ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
-                        ctx.lineTo(x + size, y + size - radius);
-                        ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-                        ctx.lineTo(x + radius, y + size);
-                        ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
-                        ctx.lineTo(x, y + radius);
-                        ctx.quadraticCurveTo(x, y, x + radius, y);
-                        ctx.closePath();
-                        ctx.clip();
-                    } else {
-                        const x = centerX - logoSize / 2 + 5;
-                        const y = centerY - logoSize / 2 + 5;
-                        const size = logoSize - 10;
-                        ctx.rect(x, y, size, size);
-                        ctx.clip();
-                    }
-                    
-                    const targetSize = logoSize - 10;
-                    const targetX = centerX - targetSize / 2;
-                    const targetY = centerY - targetSize / 2;
-                    
-                    let drawX, drawY, drawWidth, drawHeight;
-                    
-                    if (currentFit === 'stretch') {
-                        drawX = targetX;
-                        drawY = targetY;
-                        drawWidth = targetSize;
-                        drawHeight = targetSize;
-                    } else if (currentFit === 'contain') {
-                        const scale = Math.min(targetSize / logoImg.width, targetSize / logoImg.height);
-                        drawWidth = logoImg.width * scale;
-                        drawHeight = logoImg.height * scale;
-                        drawX = centerX - drawWidth / 2;
-                        drawY = centerY - drawHeight / 2;
-                    } else {
-                        const scale = Math.max(targetSize / logoImg.width, targetSize / logoImg.height);
-                        drawWidth = logoImg.width * scale;
-                        drawHeight = logoImg.height * scale;
-                        drawX = centerX - drawWidth / 2;
-                        drawY = centerY - drawHeight / 2;
-                    }
-                    
-                    ctx.drawImage(logoImg, drawX, drawY, drawWidth, drawHeight);
-                    
-                    ctx.restore();
-                    
-                    await processCanvas(finalCanvas);
-                };
-                logoImg.src = logoImage;
-            } else {
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                            ctx.shadowBlur = 10;
+                            ctx.shadowOffsetX = 0;
+                            ctx.shadowOffsetY = 2;
+
+                            ctx.fillStyle = colors.light;
+
+                            if (currentShape === 'circle') {
+                                const radius = logoSize / 2;
+                                ctx.beginPath();
+                                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else if (currentShape === 'rounded') {
+                                const x = centerX - logoSize / 2;
+                                const y = centerY - logoSize / 2;
+                                const radius = logoSize * 0.15;
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + radius, y);
+                                ctx.lineTo(x + logoSize - radius, y);
+                                ctx.quadraticCurveTo(x + logoSize, y, x + logoSize, y + radius);
+                                ctx.lineTo(x + logoSize, y + logoSize - radius);
+                                ctx.quadraticCurveTo(x + logoSize, y + logoSize, x + logoSize - radius, y + logoSize);
+                                ctx.lineTo(x + radius, y + logoSize);
+                                ctx.quadraticCurveTo(x, y + logoSize, x, y + logoSize - radius);
+                                ctx.lineTo(x, y + radius);
+                                ctx.quadraticCurveTo(x, y, x + radius, y);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else {
+                                const x = centerX - logoSize / 2;
+                                const y = centerY - logoSize / 2;
+                                ctx.fillRect(x, y, logoSize, logoSize);
+                            }
+
+                            ctx.shadowColor = 'transparent';
+                            ctx.shadowBlur = 0;
+
+                            ctx.save();
+
+                            if (currentShape === 'circle') {
+                                const radius = logoSize / 2;
+                                ctx.beginPath();
+                                ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
+                                ctx.clip();
+                            } else if (currentShape === 'rounded') {
+                                const x = centerX - logoSize / 2 + 5;
+                                const y = centerY - logoSize / 2 + 5;
+                                const size = logoSize - 10;
+                                const radius = size * 0.15;
+
+                                ctx.beginPath();
+                                ctx.moveTo(x + radius, y);
+                                ctx.lineTo(x + size - radius, y);
+                                ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+                                ctx.lineTo(x + size, y + size - radius);
+                                ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+                                ctx.lineTo(x + radius, y + size);
+                                ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+                                ctx.lineTo(x, y + radius);
+                                ctx.quadraticCurveTo(x, y, x + radius, y);
+                                ctx.closePath();
+                                ctx.clip();
+                            } else {
+                                const x = centerX - logoSize / 2 + 5;
+                                const y = centerY - logoSize / 2 + 5;
+                                const size = logoSize - 10;
+                                ctx.rect(x, y, size, size);
+                                ctx.clip();
+                            }
+
+                            const targetSize = logoSize - 10;
+                            const targetX = centerX - targetSize / 2;
+                            const targetY = centerY - targetSize / 2;
+
+                            let drawX, drawY, drawWidth, drawHeight;
+
+                            if (currentFit === 'stretch') {
+                                drawX = targetX;
+                                drawY = targetY;
+                                drawWidth = targetSize;
+                                drawHeight = targetSize;
+                            } else if (currentFit === 'contain') {
+                                const scale = Math.min(targetSize / logoImg.width, targetSize / logoImg.height);
+                                drawWidth = logoImg.width * scale;
+                                drawHeight = logoImg.height * scale;
+                                drawX = centerX - drawWidth / 2;
+                                drawY = centerY - drawHeight / 2;
+                            } else {
+                                const scale = Math.max(targetSize / logoImg.width, targetSize / logoImg.height);
+                                drawWidth = logoImg.width * scale;
+                                drawHeight = logoImg.height * scale;
+                                drawX = centerX - drawWidth / 2;
+                                drawY = centerY - drawHeight / 2;
+                            }
+
+                            ctx.drawImage(logoImg, drawX, drawY, drawWidth, drawHeight);
+
+                            ctx.restore();
+
+                            resolve();
+                        };
+                        logoImg.onerror = () => {
+                            tg.showAlert('Не удалось загрузить логотип для экспорта.');
+                            resolve();
+                        };
+                        logoImg.src = logoImage;
+                    });
+                }
+
                 await processCanvas(finalCanvas);
+            } catch (error) {
+                console.error('QR export error:', error);
+                tg.showAlert('Не удалось подготовить файл для сохранения. Попробуйте ещё раз.');
             }
         }
 
@@ -1191,12 +1312,11 @@
         generateQR();
         
         // Обновление счётчика при загрузке
-        const initialBytes = new TextEncoder().encode(document.getElementById('qrText').value).length;
-        document.getElementById('charCounter').textContent = `(${initialBytes} / 2953 байт)`;
+        updateCharCounter(document.getElementById('qrText').value);
 
         // Показываем, что приложение готово
-        if (window.Telegram?.WebApp) {
-            tg.ready();
+        if (window.Telegram?.WebApp?.ready) {
+            window.Telegram.WebApp.ready();
         }
     </script>
 </body>
