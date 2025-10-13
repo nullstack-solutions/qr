@@ -1,0 +1,52 @@
+:root {
+  color-scheme: light;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #f5f7fb;
+  color: #0b1220;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: #f5f7fb;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
+
+input, textarea, select {
+  font: inherit;
+}
+
+#root {
+  width: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(12, 33, 66, 0.12);
+  border-radius: 6px;
+}
