@@ -1,0 +1,34 @@
+{
+  "name": "qr-suite",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "node --test \"tests/**/*.test.mjs\""
+  },
+  "dependencies": {
+    "@zxing/browser": "0.1.5",
+    "classnames": "2.5.1",
+    "idb": "7.1.1",
+    "jszip": "3.10.1",
+    "next": "14.1.0",
+    "papaparse": "5.4.1",
+    "qrcode": "1.5.3",
+    "qr-code-styling": "1.6.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.19",
+    "@types/react": "18.2.55",
+    "@types/react-dom": "18.2.18",
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.1.0",
+    "typescript": "5.3.3",
+    "worker-loader": "3.0.8"
+  }
+}
