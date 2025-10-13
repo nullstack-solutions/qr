@@ -124,11 +124,6 @@ export function Generator() {
     }
   }, [QRCodeStylingCtor]);
 
-  useEffect(() => {
-    if (!qrRef.current) return;
-    regenerate();
-  }, [QRCodeStylingCtor, regenerate]);
-
   const formValues = useMemo(() => {
     const scoped: Record<string, string> = {};
     for (const field of activeDefinition.fields) {
@@ -212,6 +207,11 @@ export function Generator() {
     qrRef.current?.update(options);
     return true;
   }, [activeDefinition, formValues, draft.style]);
+
+  useEffect(() => {
+    if (!qrRef.current) return;
+    regenerate();
+  }, [QRCodeStylingCtor, regenerate]);
 
   useEffect(() => {
     if (!hydrated) return;
