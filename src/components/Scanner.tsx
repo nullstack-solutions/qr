@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader, NotFoundException } from "@zxing/browser";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 
 interface ScanResult {
   text: string;
@@ -19,7 +19,7 @@ export function Scanner() {
   useEffect(() => {
     readerRef.current = new BrowserMultiFormatReader();
     return () => {
-      readerRef.current?.reset();
+      // Cleanup handled in stopCamera
     };
   }, []);
 
@@ -34,11 +34,11 @@ export function Scanner() {
       await readerRef.current.decodeFromVideoDevice(first, videoRef.current, (result, error) => {
         if (result) {
           setResults((prev) => [
-            { text: result.getText(), timestamp: Date.now(), source: "camera" },
+            { text: result.getText(), timestamp: Date.now(), source: "camera" as const },
             ...prev
           ].slice(0, 20));
         }
-        if (error && !(error instanceof NotFoundException)) {
+        if (error && error.name !== 'NotFoundException') {
           setError(error.message ?? "Ошибка сканирования");
         }
       });
@@ -49,7 +49,6 @@ export function Scanner() {
   }, []);
 
   const stopCamera = useCallback(() => {
-    readerRef.current?.reset();
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
     }
@@ -64,7 +63,7 @@ export function Scanner() {
     try {
       const result = await readerRef.current.decodeFromImageUrl(url);
       setResults((prev) => [
-        { text: result.getText(), timestamp: Date.now(), source: "file" },
+        { text: result.getText(), timestamp: Date.now(), source: "file" as const },
         ...prev
       ].slice(0, 20));
     } catch (err: any) {

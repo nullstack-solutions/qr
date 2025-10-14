@@ -1,21 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  images: {
+    unoptimized: true
+  },
   reactStrictMode: true,
   experimental: {
     workerThreads: false,
     esmExternals: 'loose'
-  },
-  webpack: (config) => {
-    config.module.rules.push({
-      test: /batchGenerator\.worker\.(ts|js)$/,
-      use: [{
-        loader: 'worker-loader',
-        options: {
-          filename: 'static/chunks/[name].[contenthash].js'
-        }
-      }]
-    });
-    return config;
   }
 };
 

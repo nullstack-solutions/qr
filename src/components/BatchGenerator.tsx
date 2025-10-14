@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import { read, utils } from "xlsx";
 import classNames from "classnames";
-import BatchWorker from "@/workers/batchGenerator.worker.ts";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
 import { useDraft } from "@/hooks/useDraft";
 
@@ -88,7 +87,7 @@ export function BatchGenerator() {
   const { value: draft, setValue: setDraft } = useDraft<BatchDraft>("batch", defaultDraft);
 
   useEffect(() => {
-    const instance = new BatchWorker();
+    const instance = new Worker(new URL('@/workers/batchGenerator.worker.ts', import.meta.url));
     workerRef.current = instance;
     instance.onmessage = (event: MessageEvent<any>) => {
       const payload = event.data;

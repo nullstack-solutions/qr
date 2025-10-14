@@ -27,7 +27,7 @@ type WorkerResponse =
   | { id: string; error: string }
   | { id: string; done: true; buffer: ArrayBuffer };
 
-const ctx: DedicatedWorkerGlobalScope = self as any;
+const ctx = self as any;
 
 ctx.onmessage = async (event: MessageEvent<BatchJob>) => {
   const job = event.data;
