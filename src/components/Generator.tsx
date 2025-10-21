@@ -5,6 +5,13 @@ import classNames from "classnames";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
 import { useDraft } from "@/hooks/useDraft";
 
+// Haptic feedback helper
+function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+    window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+  }
+}
+
 type ErrorCorrection = "L" | "M" | "Q" | "H";
 
 type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square";
@@ -91,6 +98,7 @@ export function Generator() {
 
   const switchType = useCallback(
     (type: QRType) => {
+      triggerHaptic('light');
       setErrors({});
       setDraft((prev) => ({
         ...prev,
@@ -169,9 +177,11 @@ export function Generator() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
+      triggerHaptic('light');
       return false;
     }
 
+    triggerHaptic('medium');
     setQrPayload(payload);
 
     const options: any = {
@@ -242,6 +252,7 @@ export function Generator() {
       if (!qrRef.current) return;
       const ok = regenerate();
       if (!ok) return;
+      triggerHaptic('heavy');
       const payload = qrPayload || activeDefinition.buildPayload(formValues);
       const blob = await qrRef.current.getRawData(format);
       if (!blob) return;

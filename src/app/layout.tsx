@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TelegramThemeProvider } from "@/providers/TelegramThemeProvider";
 
 export const metadata: Metadata = {
   title: "QR Suite",
@@ -13,7 +14,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <head>
+        <script src="https://telegram.org/js/telegram-web-app.js" async />
+      </head>
+      <body>
+        <TelegramThemeProvider>
+          {children}
+        </TelegramThemeProvider>
+      </body>
     </html>
   );
 }
