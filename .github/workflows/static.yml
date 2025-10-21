@@ -38,6 +38,27 @@ jobs:
       - name: Add .nojekyll file
         run: touch ./out/.nojekyll
 
+      # Для PROD: чекаутим gh-pages, удаляем корневые файлы (кроме test/)
+      - name: Checkout gh-pages branch
+        if: github.ref_name == 'main'
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-content
+
+      - name: Clean root files (preserve test folder)
+        if: github.ref_name == 'main'
+        run: |
+          cd gh-pages-content
+          # Удаляем все файлы и папки в корне, кроме .git и test
+          find . -maxdepth 1 ! -name '.' ! -name '..' ! -name '.git' ! -name 'test' -exec rm -rf {} +
+          cd ..
+
+      - name: Copy new build to gh-pages root
+        if: github.ref_name == 'main'
+        run: |
+          cp -r ./out/* gh-pages-content/
+
       # PROD → корень gh-pages
       - name: Deploy PROD to gh-pages root
         if: github.ref_name == 'main'
@@ -45,9 +66,9 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./out
+          publish_dir: ./gh-pages-content
           destination_dir: .
-          keep_files: false
+          keep_files: true
           enable_jekyll: false
 
       # TEST → gh-pages/test
