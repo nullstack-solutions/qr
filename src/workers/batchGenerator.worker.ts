@@ -37,10 +37,12 @@ ctx.onmessage = async (event: MessageEvent<BatchJob>) => {
     let processed = 0;
     const zip = new JSZip();
 
+    const createSegments = (value: string) => [{ data: value, mode: "byte" as const }];
+
     for (const item of job.items) {
       const filename = `${String(item.index).padStart(4, "0")}_${item.type}_${item.slug}.${job.format}`;
       if (job.format === "svg") {
-        const svg = await QRCode.toString(item.payload, {
+        const svg = await QRCode.toString(createSegments(item.payload), {
           type: "svg",
           width: job.options.size,
           errorCorrectionLevel: job.options.errorCorrection,
@@ -52,7 +54,7 @@ ctx.onmessage = async (event: MessageEvent<BatchJob>) => {
         });
         zip.file(filename, svg);
       } else {
-        const dataUrl = await QRCode.toDataURL(item.payload, {
+        const dataUrl = await QRCode.toDataURL(createSegments(item.payload), {
           width: job.options.size,
           errorCorrectionLevel: job.options.errorCorrection,
           margin: job.options.margin,

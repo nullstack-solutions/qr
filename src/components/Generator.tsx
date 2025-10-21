@@ -180,7 +180,12 @@ export function Generator() {
         width: defaultStyle.size,
         height: defaultStyle.size,
         data: "https://example.com",
-        image: undefined
+        image: undefined,
+        qrOptions: {
+          errorCorrectionLevel: defaultStyle.errorCorrection,
+          margin: defaultStyle.margin,
+          mode: "Byte"
+        }
       });
       qrRef.current = instance;
       instance.append(containerRef.current);
@@ -259,7 +264,8 @@ export function Generator() {
       shape: draft.style.shape,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
-        margin: draft.style.margin
+        margin: draft.style.margin,
+        mode: "Byte"
       },
       dotsOptions: {
         ...(draft.style.useDotsGradient && draft.style.dotsGradient
