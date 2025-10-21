@@ -1,0 +1,60 @@
+/* Telegram Mini App Theme Variables */
+
+:root {
+  /* Default light theme fallback values */
+  --tg-bg: #ffffff;
+  --tg-text: #000000;
+  --tg-hint: rgba(0, 0, 0, 0.5);
+  --tg-link: #3390ec;
+  --tg-button: #3390ec;
+  --tg-button-text: #ffffff;
+  --tg-secondary: #f0f0f0;
+  --tg-header-bg: #ffffff;
+  --tg-accent: #3390ec;
+  --tg-section-bg: #ffffff;
+  --tg-section-header: #6d6d72;
+  --tg-subtitle: #999999;
+  --tg-destructive: #ff3b30;
+
+  /* Spacing tokens - mobile-first */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+
+  /* Border radius tokens - Telegram-style */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Typography */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+
+  /* Tap targets */
+  --tap-target-min: 44px;
+}
+
+/* Dark mode defaults (when Telegram theme is not available) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tg-bg: #18222d;
+    --tg-text: #ffffff;
+    --tg-hint: rgba(255, 255, 255, 0.5);
+    --tg-link: #62bcf6;
+    --tg-button: #62bcf6;
+    --tg-button-text: #ffffff;
+    --tg-secondary: #131e2a;
+    --tg-header-bg: #18222d;
+    --tg-accent: #62bcf6;
+    --tg-section-bg: #18222d;
+    --tg-section-header: #8e8e93;
+    --tg-subtitle: #7d7d81;
+    --tg-destructive: #ff4444;
+  }
+}

@@ -5,13 +5,23 @@ import classNames from "classnames";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
 import { useDraft } from "@/hooks/useDraft";
 
+// Haptic feedback helper
+function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+    window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+  }
+}
+
 type ErrorCorrection = "L" | "M" | "Q" | "H";
 
-type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square";
+type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
 
-type EyeStyle = "square" | "circle";
+type EyeStyle = "square" | "extra-rounded" | "dot";
 
 type EyeDotStyle = "square" | "dot";
+
+type ShapeType = "square" | "circle";
+
 
 type GradientType = "linear" | "radial";
 
@@ -20,10 +30,9 @@ interface ColorStop {
   color: string;
 }
 
-interface GradientOptions {
-  enabled: boolean;
+interface Gradient {
   type: GradientType;
-  rotation: number;
+  rotation?: number;
   colorStops: ColorStop[];
 }
 
@@ -38,7 +47,16 @@ interface StyleOptions {
   eyeInner: EyeDotStyle;
   logoDataUrl?: string;
   logoSize: number;
-  gradient: GradientOptions;
+  shape: ShapeType;
+  // Gradient options
+  useDotsGradient: boolean;
+  dotsGradient?: Gradient;
+  useBackgroundGradient: boolean;
+  backgroundGradient?: Gradient;
+  useCornersGradient: boolean;
+  cornersGradient?: Gradient;
+  // Image options
+  hideBackgroundDots: boolean;
 }
 
 interface GeneratorDraft {
@@ -57,15 +75,35 @@ const defaultStyle: StyleOptions = {
   eyeOuter: "square",
   eyeInner: "square",
   logoSize: 18,
-  gradient: {
-    enabled: false,
+  shape: "square",
+  useDotsGradient: false,
+  dotsGradient: {
     type: "linear",
     rotation: 0,
     colorStops: [
       { offset: 0, color: "#0b1220" },
-      { offset: 1, color: "#3b82f6" }
+      { offset: 1, color: "#4a5568" }
     ]
-  }
+  },
+  useBackgroundGradient: false,
+  backgroundGradient: {
+    type: "linear",
+    rotation: 0,
+    colorStops: [
+      { offset: 0, color: "#ffffff" },
+      { offset: 1, color: "#f7fafc" }
+    ]
+  },
+  useCornersGradient: false,
+  cornersGradient: {
+    type: "linear",
+    rotation: 0,
+    colorStops: [
+      { offset: 0, color: "#0b1220" },
+      { offset: 1, color: "#4a5568" }
+    ]
+  },
+  hideBackgroundDots: true
 };
 
 const MAX_PAYLOAD_BYTES = 2953;
@@ -115,6 +153,7 @@ export function Generator() {
 
   const switchType = useCallback(
     (type: QRType) => {
+      triggerHaptic('light');
       setErrors({});
       setDraft((prev) => ({
         ...prev,
@@ -193,9 +232,11 @@ export function Generator() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
+      triggerHaptic('light');
       return false;
     }
 
+    triggerHaptic('medium');
     setQrPayload(payload);
 
     // Определяем форму фона на основе формы QR кода
@@ -215,32 +256,38 @@ export function Generator() {
       width: draft.style.size,
       height: draft.style.size,
       image: draft.style.logoDataUrl,
+      shape: draft.style.shape,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
         margin: draft.style.margin
       },
       dotsOptions: {
-        color: draft.style.gradient.enabled ? undefined : draft.style.foreground,
-        gradient: dotsGradient,
+        ...(draft.style.useDotsGradient && draft.style.dotsGradient
+          ? { gradient: draft.style.dotsGradient }
+          : { color: draft.style.foreground }),
         type: draft.style.dotStyle
       },
       backgroundOptions: {
-        color: draft.style.background,
-        round: isRounded ? 0.5 : 0
+        ...(draft.style.useBackgroundGradient && draft.style.backgroundGradient
+          ? { gradient: draft.style.backgroundGradient }
+          : { color: draft.style.background })
       },
       cornersSquareOptions: {
-        color: draft.style.gradient.enabled ? undefined : draft.style.foreground,
-        gradient: dotsGradient,
+        ...(draft.style.useCornersGradient && draft.style.cornersGradient
+          ? { gradient: draft.style.cornersGradient }
+          : { color: draft.style.foreground }),
         type: draft.style.eyeOuter
       },
       cornersDotOptions: {
-        color: draft.style.gradient.enabled ? undefined : draft.style.foreground,
-        gradient: dotsGradient,
+        ...(draft.style.useCornersGradient && draft.style.cornersGradient
+          ? { gradient: draft.style.cornersGradient }
+          : { color: draft.style.foreground }),
         type: draft.style.eyeInner
       },
       imageOptions: {
         imageSize: draft.style.logoSize / 100,
-        margin: 4
+        margin: 4,
+        hideBackgroundDots: draft.style.hideBackgroundDots
       }
     };
 
@@ -282,6 +329,7 @@ export function Generator() {
       if (!qrRef.current) return;
       const ok = regenerate();
       if (!ok) return;
+      triggerHaptic('heavy');
       const payload = qrPayload || activeDefinition.buildPayload(formValues);
       const blob = await qrRef.current.getRawData(format);
       if (!blob) return;
@@ -516,6 +564,7 @@ export function Generator() {
               >
                 <option value="square">Квадрат</option>
                 <option value="rounded">Скруглённый</option>
+                <option value="extra-rounded">Очень скруглённый</option>
                 <option value="dots">Точки</option>
                 <option value="classy">Classy</option>
                 <option value="classy-rounded">Classy Rounded</option>
@@ -529,7 +578,8 @@ export function Generator() {
                 onChange={(event) => updateStyle({ eyeOuter: event.target.value as EyeStyle })}
               >
                 <option value="square">Квадрат</option>
-                <option value="circle">Круг</option>
+                <option value="extra-rounded">Скруглённый</option>
+                <option value="dot">Точка</option>
               </select>
             </label>
 
@@ -566,17 +616,261 @@ export function Generator() {
             </label>
 
             {draft.style.logoDataUrl ? (
-              <label className="panel__field">
-                <span>Размер логотипа, %</span>
-                <input
-                  type="range"
-                  min={10}
-                  max={30}
-                  value={draft.style.logoSize}
-                  onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
-                />
-                <strong>{draft.style.logoSize}</strong>
-              </label>
+              <>
+                <label className="panel__field">
+                  <span>Размер логотипа, %</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={30}
+                    value={draft.style.logoSize}
+                    onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
+                  />
+                  <strong>{draft.style.logoSize}</strong>
+                </label>
+
+                <label className="panel__field">
+                  <span>Скрыть точки под логотипом</span>
+                  <input
+                    type="checkbox"
+                    checked={draft.style.hideBackgroundDots}
+                    onChange={(event) => updateStyle({ hideBackgroundDots: event.target.checked })}
+                  />
+                </label>
+              </>
+            ) : null}
+
+            <label className="panel__field">
+              <span>Форма QR-кода</span>
+              <select
+                value={draft.style.shape}
+                onChange={(event) => updateStyle({ shape: event.target.value as ShapeType })}
+              >
+                <option value="square">Квадрат</option>
+                <option value="circle">Круг</option>
+              </select>
+            </label>
+
+            <label className="panel__field">
+              <span>Градиент точек</span>
+              <input
+                type="checkbox"
+                checked={draft.style.useDotsGradient}
+                onChange={(event) => updateStyle({ useDotsGradient: event.target.checked })}
+              />
+            </label>
+
+            {draft.style.useDotsGradient && draft.style.dotsGradient ? (
+              <>
+                <label className="panel__field">
+                  <span>Тип градиента точек</span>
+                  <select
+                    value={draft.style.dotsGradient.type}
+                    onChange={(event) => updateStyle({
+                      dotsGradient: {
+                        ...draft.style.dotsGradient!,
+                        type: event.target.value as GradientType
+                      }
+                    })}
+                  >
+                    <option value="linear">Линейный</option>
+                    <option value="radial">Радиальный</option>
+                  </select>
+                </label>
+
+                {draft.style.dotsGradient.type === "linear" ? (
+                  <label className="panel__field">
+                    <span>Угол поворота, °</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={draft.style.dotsGradient.rotation || 0}
+                      onChange={(event) => updateStyle({
+                        dotsGradient: {
+                          ...draft.style.dotsGradient!,
+                          rotation: Number(event.target.value)
+                        }
+                      })}
+                    />
+                    <strong>{draft.style.dotsGradient.rotation || 0}</strong>
+                  </label>
+                ) : null}
+
+                <label className="panel__field">
+                  <span>Начальный цвет</span>
+                  <input
+                    type="color"
+                    value={draft.style.dotsGradient.colorStops[0]?.color || "#000000"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.dotsGradient!.colorStops];
+                      newStops[0] = { ...newStops[0], color: event.target.value };
+                      updateStyle({ dotsGradient: { ...draft.style.dotsGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+
+                <label className="panel__field">
+                  <span>Конечный цвет</span>
+                  <input
+                    type="color"
+                    value={draft.style.dotsGradient.colorStops[1]?.color || "#000000"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.dotsGradient!.colorStops];
+                      newStops[1] = { ...newStops[1], color: event.target.value };
+                      updateStyle({ dotsGradient: { ...draft.style.dotsGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+              </>
+            ) : null}
+
+            <label className="panel__field">
+              <span>Градиент фона</span>
+              <input
+                type="checkbox"
+                checked={draft.style.useBackgroundGradient}
+                onChange={(event) => updateStyle({ useBackgroundGradient: event.target.checked })}
+              />
+            </label>
+
+            {draft.style.useBackgroundGradient && draft.style.backgroundGradient ? (
+              <>
+                <label className="panel__field">
+                  <span>Тип градиента фона</span>
+                  <select
+                    value={draft.style.backgroundGradient.type}
+                    onChange={(event) => updateStyle({
+                      backgroundGradient: {
+                        ...draft.style.backgroundGradient!,
+                        type: event.target.value as GradientType
+                      }
+                    })}
+                  >
+                    <option value="linear">Линейный</option>
+                    <option value="radial">Радиальный</option>
+                  </select>
+                </label>
+
+                {draft.style.backgroundGradient.type === "linear" ? (
+                  <label className="panel__field">
+                    <span>Угол поворота, °</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={draft.style.backgroundGradient.rotation || 0}
+                      onChange={(event) => updateStyle({
+                        backgroundGradient: {
+                          ...draft.style.backgroundGradient!,
+                          rotation: Number(event.target.value)
+                        }
+                      })}
+                    />
+                    <strong>{draft.style.backgroundGradient.rotation || 0}</strong>
+                  </label>
+                ) : null}
+
+                <label className="panel__field">
+                  <span>Начальный цвет фона</span>
+                  <input
+                    type="color"
+                    value={draft.style.backgroundGradient.colorStops[0]?.color || "#ffffff"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.backgroundGradient!.colorStops];
+                      newStops[0] = { ...newStops[0], color: event.target.value };
+                      updateStyle({ backgroundGradient: { ...draft.style.backgroundGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+
+                <label className="panel__field">
+                  <span>Конечный цвет фона</span>
+                  <input
+                    type="color"
+                    value={draft.style.backgroundGradient.colorStops[1]?.color || "#ffffff"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.backgroundGradient!.colorStops];
+                      newStops[1] = { ...newStops[1], color: event.target.value };
+                      updateStyle({ backgroundGradient: { ...draft.style.backgroundGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+              </>
+            ) : null}
+
+            <label className="panel__field">
+              <span>Градиент углов</span>
+              <input
+                type="checkbox"
+                checked={draft.style.useCornersGradient}
+                onChange={(event) => updateStyle({ useCornersGradient: event.target.checked })}
+              />
+            </label>
+
+            {draft.style.useCornersGradient && draft.style.cornersGradient ? (
+              <>
+                <label className="panel__field">
+                  <span>Тип градиента углов</span>
+                  <select
+                    value={draft.style.cornersGradient.type}
+                    onChange={(event) => updateStyle({
+                      cornersGradient: {
+                        ...draft.style.cornersGradient!,
+                        type: event.target.value as GradientType
+                      }
+                    })}
+                  >
+                    <option value="linear">Линейный</option>
+                    <option value="radial">Радиальный</option>
+                  </select>
+                </label>
+
+                {draft.style.cornersGradient.type === "linear" ? (
+                  <label className="panel__field">
+                    <span>Угол поворота, °</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={draft.style.cornersGradient.rotation || 0}
+                      onChange={(event) => updateStyle({
+                        cornersGradient: {
+                          ...draft.style.cornersGradient!,
+                          rotation: Number(event.target.value)
+                        }
+                      })}
+                    />
+                    <strong>{draft.style.cornersGradient.rotation || 0}</strong>
+                  </label>
+                ) : null}
+
+                <label className="panel__field">
+                  <span>Начальный цвет углов</span>
+                  <input
+                    type="color"
+                    value={draft.style.cornersGradient.colorStops[0]?.color || "#000000"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.cornersGradient!.colorStops];
+                      newStops[0] = { ...newStops[0], color: event.target.value };
+                      updateStyle({ cornersGradient: { ...draft.style.cornersGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+
+                <label className="panel__field">
+                  <span>Конечный цвет углов</span>
+                  <input
+                    type="color"
+                    value={draft.style.cornersGradient.colorStops[1]?.color || "#000000"}
+                    onChange={(event) => {
+                      const newStops = [...draft.style.cornersGradient!.colorStops];
+                      newStops[1] = { ...newStops[1], color: event.target.value };
+                      updateStyle({ cornersGradient: { ...draft.style.cornersGradient!, colorStops: newStops } });
+                    }}
+                  />
+                </label>
+              </>
             ) : null}
           </div>
 
