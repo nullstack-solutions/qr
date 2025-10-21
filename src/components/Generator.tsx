@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
+import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
 
 // Haptic feedback helper
@@ -10,16 +11,6 @@ function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
   if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
     window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
   }
-}
-
-function bytesToBinaryString(bytes: Uint8Array): string {
-  let result = "";
-  const chunkSize = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    const chunk = bytes.subarray(index, index + chunkSize);
-    result += String.fromCharCode(...chunk);
-  }
-  return result;
 }
 
 function radiansToDegrees(radians?: number) {
@@ -357,7 +348,7 @@ export function Generator() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
-    [regenerate, qrPayload, errors]
+    [regenerate, qrPayload, activeDefinition, formValues]
   );
 
   return (
