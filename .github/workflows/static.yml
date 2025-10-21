@@ -27,13 +27,13 @@ jobs:
         if: github.ref_name == 'main'
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: ''
+          NEXT_PUBLIC_BASE_PATH: '/qr'
 
       - name: Build Next.js app (TEST)
         if: github.ref_name == 'test'
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: '/test'
+          NEXT_PUBLIC_BASE_PATH: '/qr/test'
 
       - name: Add .nojekyll file
         run: touch ./out/.nojekyll
