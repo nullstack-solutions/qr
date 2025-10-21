@@ -242,7 +242,7 @@ export function Generator() {
     // Определяем форму фона на основе формы QR кода
     const isRounded = draft.style.dotStyle === "dots" ||
                      draft.style.dotStyle === "classy-rounded" ||
-                     draft.style.eyeOuter === "circle";
+                     draft.style.eyeOuter === "extra-rounded";
 
     // Подготовка градиента для точек
     const dotsGradient = draft.style.gradient.enabled ? {
