@@ -12,6 +12,24 @@ function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
   }
 }
 
+function bytesToBinaryString(bytes: Uint8Array): string {
+  let result = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    result += String.fromCharCode(...chunk);
+  }
+  return result;
+}
+
+function radiansToDegrees(radians?: number) {
+  return Math.round(((radians ?? 0) * 180) / Math.PI);
+}
+
+function degreesToRadians(degrees: number) {
+  return (degrees * Math.PI) / 180;
+}
+
 type ErrorCorrection = "L" | "M" | "Q" | "H";
 
 type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
@@ -206,7 +224,8 @@ export function Generator() {
 
     const payload = activeDefinition.buildPayload(formValues);
     const encoder = new TextEncoder();
-    const bytes = encoder.encode(payload).length;
+    const encodedBytes = encoder.encode(payload);
+    const bytes = encodedBytes.length;
     setByteLength(bytes);
 
     const newErrors: Record<string, string> = {};
@@ -245,19 +264,8 @@ export function Generator() {
     setQrPayload(payload);
 
     // Определяем форму фона на основе формы QR кода
-    const isRounded = draft.style.dotStyle === "dots" ||
-                     draft.style.dotStyle === "classy-rounded" ||
-                     draft.style.eyeOuter === "extra-rounded";
-
-    // Подготовка градиента для точек
-    const dotsGradient = draft.style.useDotsGradient && draft.style.dotsGradient ? {
-      type: draft.style.dotsGradient.type,
-      rotation: draft.style.dotsGradient.rotation,
-      colorStops: draft.style.dotsGradient.colorStops
-    } : undefined;
-
     const options: any = {
-      data: payload,
+      data: bytesToBinaryString(encodedBytes),
       width: draft.style.size,
       height: draft.style.size,
       image: draft.style.logoDataUrl,
@@ -508,17 +516,17 @@ export function Generator() {
                       type="range"
                       min={0}
                       max={360}
-                      value={Math.round(((draft.style.dotsGradient.rotation || 0) / Math.PI) * 180)}
+                      value={radiansToDegrees(draft.style.dotsGradient.rotation)}
                       onChange={(event) =>
                         updateStyle({
                           dotsGradient: {
                             ...draft.style.dotsGradient!,
-                            rotation: (Number(event.target.value) / 180) * Math.PI
+                            rotation: degreesToRadians(Number(event.target.value))
                           }
                         })
                       }
                     />
-                    <strong>{Math.round(((draft.style.dotsGradient.rotation || 0) / Math.PI) * 180)}</strong>
+                    <strong>{radiansToDegrees(draft.style.dotsGradient.rotation)}</strong>
                   </label>
                 )}
 
@@ -658,80 +666,6 @@ export function Generator() {
             </label>
 
             <label className="panel__field">
-              <span>Градиент точек</span>
-              <input
-                type="checkbox"
-                checked={draft.style.useDotsGradient}
-                onChange={(event) => updateStyle({ useDotsGradient: event.target.checked })}
-              />
-            </label>
-
-            {draft.style.useDotsGradient && draft.style.dotsGradient ? (
-              <>
-                <label className="panel__field">
-                  <span>Тип градиента точек</span>
-                  <select
-                    value={draft.style.dotsGradient.type}
-                    onChange={(event) => updateStyle({
-                      dotsGradient: {
-                        ...draft.style.dotsGradient!,
-                        type: event.target.value as GradientType
-                      }
-                    })}
-                  >
-                    <option value="linear">Линейный</option>
-                    <option value="radial">Радиальный</option>
-                  </select>
-                </label>
-
-                {draft.style.dotsGradient.type === "linear" ? (
-                  <label className="panel__field">
-                    <span>Угол поворота, °</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={360}
-                      value={draft.style.dotsGradient.rotation || 0}
-                      onChange={(event) => updateStyle({
-                        dotsGradient: {
-                          ...draft.style.dotsGradient!,
-                          rotation: Number(event.target.value)
-                        }
-                      })}
-                    />
-                    <strong>{draft.style.dotsGradient.rotation || 0}</strong>
-                  </label>
-                ) : null}
-
-                <label className="panel__field">
-                  <span>Начальный цвет</span>
-                  <input
-                    type="color"
-                    value={draft.style.dotsGradient.colorStops[0]?.color || "#000000"}
-                    onChange={(event) => {
-                      const newStops = [...draft.style.dotsGradient!.colorStops];
-                      newStops[0] = { ...newStops[0], color: event.target.value };
-                      updateStyle({ dotsGradient: { ...draft.style.dotsGradient!, colorStops: newStops } });
-                    }}
-                  />
-                </label>
-
-                <label className="panel__field">
-                  <span>Конечный цвет</span>
-                  <input
-                    type="color"
-                    value={draft.style.dotsGradient.colorStops[1]?.color || "#000000"}
-                    onChange={(event) => {
-                      const newStops = [...draft.style.dotsGradient!.colorStops];
-                      newStops[1] = { ...newStops[1], color: event.target.value };
-                      updateStyle({ dotsGradient: { ...draft.style.dotsGradient!, colorStops: newStops } });
-                    }}
-                  />
-                </label>
-              </>
-            ) : null}
-
-            <label className="panel__field">
               <span>Градиент фона</span>
               <input
                 type="checkbox"
@@ -765,15 +699,15 @@ export function Generator() {
                       type="range"
                       min={0}
                       max={360}
-                      value={draft.style.backgroundGradient.rotation || 0}
+                      value={radiansToDegrees(draft.style.backgroundGradient.rotation)}
                       onChange={(event) => updateStyle({
                         backgroundGradient: {
                           ...draft.style.backgroundGradient!,
-                          rotation: Number(event.target.value)
+                          rotation: degreesToRadians(Number(event.target.value))
                         }
                       })}
                     />
-                    <strong>{draft.style.backgroundGradient.rotation || 0}</strong>
+                    <strong>{radiansToDegrees(draft.style.backgroundGradient.rotation)}</strong>
                   </label>
                 ) : null}
 
@@ -839,15 +773,15 @@ export function Generator() {
                       type="range"
                       min={0}
                       max={360}
-                      value={draft.style.cornersGradient.rotation || 0}
+                      value={radiansToDegrees(draft.style.cornersGradient.rotation)}
                       onChange={(event) => updateStyle({
                         cornersGradient: {
                           ...draft.style.cornersGradient!,
-                          rotation: Number(event.target.value)
+                          rotation: degreesToRadians(Number(event.target.value))
                         }
                       })}
                     />
-                    <strong>{draft.style.cornersGradient.rotation || 0}</strong>
+                    <strong>{radiansToDegrees(draft.style.cornersGradient.rotation)}</strong>
                   </label>
                 ) : null}
 
