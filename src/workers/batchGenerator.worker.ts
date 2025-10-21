@@ -27,6 +27,10 @@ type WorkerResponse =
   | { id: string; error: string }
   | { id: string; done: true; buffer: ArrayBuffer };
 
+export const createSegments = (value: string) => [
+  { data: new TextEncoder().encode(value), mode: "byte" as const }
+];
+
 const ctx = self as any;
 
 ctx.onmessage = async (event: MessageEvent<BatchJob>) => {
@@ -36,8 +40,6 @@ ctx.onmessage = async (event: MessageEvent<BatchJob>) => {
     const chunk = Math.max(1, job.options.chunk || 250);
     let processed = 0;
     const zip = new JSZip();
-
-    const createSegments = (value: string) => [{ data: value, mode: "byte" as const }];
 
     for (const item of job.items) {
       const filename = `${String(item.index).padStart(4, "0")}_${item.type}_${item.slug}.${job.format}`;
