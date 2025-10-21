@@ -245,10 +245,10 @@ export function Generator() {
                      draft.style.eyeOuter === "extra-rounded";
 
     // Подготовка градиента для точек
-    const dotsGradient = draft.style.gradient.enabled ? {
-      type: draft.style.gradient.type,
-      rotation: draft.style.gradient.rotation,
-      colorStops: draft.style.gradient.colorStops
+    const dotsGradient = draft.style.useDotsGradient && draft.style.dotsGradient ? {
+      type: draft.style.dotsGradient.type,
+      rotation: draft.style.dotsGradient.rotation,
+      colorStops: draft.style.dotsGradient.colorStops
     } : undefined;
 
     const options: any = {
@@ -466,10 +466,10 @@ export function Generator() {
               <span>
                 <input
                   type="checkbox"
-                  checked={draft.style.gradient.enabled}
+                  checked={draft.style.useDotsGradient}
                   onChange={(event) =>
                     updateStyle({
-                      gradient: { ...draft.style.gradient, enabled: event.target.checked }
+                      useDotsGradient: event.target.checked
                     })
                   }
                   style={{ width: "auto", marginRight: "8px" }}
@@ -478,15 +478,15 @@ export function Generator() {
               </span>
             </label>
 
-            {draft.style.gradient.enabled && (
+            {draft.style.useDotsGradient && draft.style.dotsGradient && (
               <>
                 <label className="panel__field">
                   <span>Тип градиента</span>
                   <select
-                    value={draft.style.gradient.type}
+                    value={draft.style.dotsGradient.type}
                     onChange={(event) =>
                       updateStyle({
-                        gradient: { ...draft.style.gradient, type: event.target.value as GradientType }
+                        dotsGradient: { ...draft.style.dotsGradient!, type: event.target.value as GradientType }
                       })
                     }
                   >
@@ -495,24 +495,24 @@ export function Generator() {
                   </select>
                 </label>
 
-                {draft.style.gradient.type === "linear" && (
+                {draft.style.dotsGradient.type === "linear" && (
                   <label className="panel__field">
                     <span>Угол поворота, °</span>
                     <input
                       type="range"
                       min={0}
                       max={360}
-                      value={Math.round((draft.style.gradient.rotation / Math.PI) * 180)}
+                      value={Math.round(((draft.style.dotsGradient.rotation || 0) / Math.PI) * 180)}
                       onChange={(event) =>
                         updateStyle({
-                          gradient: {
-                            ...draft.style.gradient,
+                          dotsGradient: {
+                            ...draft.style.dotsGradient!,
                             rotation: (Number(event.target.value) / 180) * Math.PI
                           }
                         })
                       }
                     />
-                    <strong>{Math.round((draft.style.gradient.rotation / Math.PI) * 180)}</strong>
+                    <strong>{Math.round(((draft.style.dotsGradient.rotation || 0) / Math.PI) * 180)}</strong>
                   </label>
                 )}
 
@@ -520,14 +520,14 @@ export function Generator() {
                   <span>Начальный цвет градиента</span>
                   <input
                     type="color"
-                    value={draft.style.gradient.colorStops[0].color}
+                    value={draft.style.dotsGradient.colorStops[0].color}
                     onChange={(event) =>
                       updateStyle({
-                        gradient: {
-                          ...draft.style.gradient,
+                        dotsGradient: {
+                          ...draft.style.dotsGradient!,
                           colorStops: [
-                            { ...draft.style.gradient.colorStops[0], color: event.target.value },
-                            draft.style.gradient.colorStops[1]
+                            { ...draft.style.dotsGradient!.colorStops[0], color: event.target.value },
+                            draft.style.dotsGradient!.colorStops[1]
                           ]
                         }
                       })
@@ -539,14 +539,14 @@ export function Generator() {
                   <span>Конечный цвет градиента</span>
                   <input
                     type="color"
-                    value={draft.style.gradient.colorStops[1].color}
+                    value={draft.style.dotsGradient.colorStops[1].color}
                     onChange={(event) =>
                       updateStyle({
-                        gradient: {
-                          ...draft.style.gradient,
+                        dotsGradient: {
+                          ...draft.style.dotsGradient!,
                           colorStops: [
-                            draft.style.gradient.colorStops[0],
-                            { ...draft.style.gradient.colorStops[1], color: event.target.value }
+                            draft.style.dotsGradient!.colorStops[0],
+                            { ...draft.style.dotsGradient!.colorStops[1], color: event.target.value }
                           ]
                         }
                       })
