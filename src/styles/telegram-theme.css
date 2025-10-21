@@ -1,58 +1,104 @@
-/* Telegram Mini App Theme Variables */
+/* TMA Premium Design System - Theme Variables */
 
 :root {
-  /* Default light theme fallback values */
-  --tg-bg: #ffffff;
-  --tg-text: #000000;
-  --tg-hint: rgba(0, 0, 0, 0.5);
-  --tg-link: #3390ec;
-  --tg-button: #3390ec;
+  /* Color Palette - TMA Premium Design System */
+  --bg: #ffffff;
+  --surface: #f0f0f0;
+  --text: #000000;
+  --hint: #6d6d6d;
+  --accent: #3390ec;
+  --button: #3390ec;
+
+  /* Legacy Telegram variables for backwards compatibility */
+  --tg-bg: var(--bg);
+  --tg-text: var(--text);
+  --tg-hint: var(--hint);
+  --tg-link: var(--accent);
+  --tg-button: var(--button);
   --tg-button-text: #ffffff;
-  --tg-secondary: #f0f0f0;
-  --tg-header-bg: #ffffff;
-  --tg-accent: #3390ec;
-  --tg-section-bg: #ffffff;
-  --tg-section-header: #6d6d72;
+  --tg-secondary: var(--surface);
+  --tg-header-bg: var(--bg);
+  --tg-accent: var(--accent);
+  --tg-section-bg: var(--bg);
+  --tg-section-header: var(--hint);
   --tg-subtitle: #999999;
   --tg-destructive: #ff3b30;
 
-  /* Spacing tokens - mobile-first */
+  /* Spacing Scale - TMA Premium */
   --spacing-xs: 8px;
   --spacing-sm: 12px;
   --spacing-md: 16px;
-  --spacing-lg: 20px;
-  --spacing-xl: 24px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 40px;
 
-  /* Border radius tokens - Telegram-style */
+  /* Border Radius - TMA Premium */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
 
-  /* Typography */
+  /* Typography Scale - TMA Premium */
+  --font-hero: 32px;
+  --font-section: 20px;
+  --font-label: 13px;
+  --font-body: 15px;
+  --font-caption: 13px;
+  --font-small: 11px;
+
+  /* Legacy font sizes */
   --font-size-xs: 12px;
-  --font-size-sm: 13px;
+  --font-size-sm: var(--font-caption);
   --font-size-base: 14px;
-  --font-size-md: 15px;
+  --font-size-md: var(--font-body);
   --font-size-lg: 16px;
-  --font-size-xl: 20px;
+  --font-size-xl: var(--font-section);
+
+  /* Shadows - TMA Premium */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 12px rgba(51, 144, 236, 0.3);
+  --shadow-lg: 0 8px 24px rgba(51, 144, 236, 0.25);
+
+  /* Transitions - TMA Premium */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Gradients - TMA Premium Presets */
+  --gradient-primary: linear-gradient(135deg, var(--accent) 0%, #2b7fd6 100%);
+  --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --gradient-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  --gradient-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 
   /* Tap targets */
   --tap-target-min: 44px;
 }
 
-/* Dark mode defaults (when Telegram theme is not available) */
+/* Dark mode - TMA Premium Design System */
 @media (prefers-color-scheme: dark) {
   :root {
-    --tg-bg: #18222d;
-    --tg-text: #ffffff;
-    --tg-hint: rgba(255, 255, 255, 0.5);
-    --tg-link: #62bcf6;
-    --tg-button: #62bcf6;
+    /* Color Palette - Dark Mode */
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --text: #ffffff;
+    --hint: #6d6d6d;
+    --accent: #3390ec;
+    --button: #3390ec;
+
+    /* Legacy Telegram variables for backwards compatibility */
+    --tg-bg: var(--bg);
+    --tg-text: var(--text);
+    --tg-hint: var(--hint);
+    --tg-link: var(--accent);
+    --tg-button: var(--button);
     --tg-button-text: #ffffff;
-    --tg-secondary: #131e2a;
-    --tg-header-bg: #18222d;
-    --tg-accent: #62bcf6;
-    --tg-section-bg: #18222d;
+    --tg-secondary: var(--surface);
+    --tg-header-bg: var(--bg);
+    --tg-accent: var(--accent);
+    --tg-section-bg: var(--bg);
     --tg-section-header: #8e8e93;
     --tg-subtitle: #7d7d81;
     --tg-destructive: #ff4444;
