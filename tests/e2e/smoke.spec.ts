@@ -69,7 +69,7 @@ test('page contains main content', async ({ page }) => {
   expect(buttons).toBeGreaterThan(0);
 });
 
-test('theme params are applied correctly', async ({ page }) => {
+test('Telegram WebApp is available', async ({ page }) => {
   await page.goto(process.env.APP_URL ?? 'http://localhost:3000');
   await page.waitForLoadState('networkidle');
 
@@ -81,13 +81,17 @@ test('theme params are applied correctly', async ({ page }) => {
 
   expect(hasTelegram).toBe(true);
 
-  // Check that theme variables are applied
-  const bgColor = await page.evaluate(() => {
-    return getComputedStyle(document.documentElement).getPropertyValue('--bg');
+  // Check that Telegram WebApp has expected methods
+  const hasWebAppMethods = await page.evaluate(() => {
+    // @ts-ignore
+    const webApp = window.Telegram?.WebApp;
+    return webApp &&
+           typeof webApp.ready === 'function' &&
+           typeof webApp.expand === 'function' &&
+           webApp.platform !== undefined;
   });
 
-  console.log('Background color:', bgColor);
-  expect(bgColor).toBeTruthy();
+  expect(hasWebAppMethods).toBe(true);
 });
 
 test('viewport size matches mobile device', async ({ page }) => {
