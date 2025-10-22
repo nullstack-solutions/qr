@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from "next/dynamic";
-import { Generator } from "@/components/Generator";
+import { GeneratorNew } from "@/components/GeneratorNew";
 import { Skeleton } from "@/components/ui/Skeleton";
 import "./page.css";
 
@@ -25,22 +25,7 @@ const Scanner = dynamic(
 export default function HomePage() {
   return (
     <main className="page">
-      <header className="page__hero">
-        <div>
-          <h1>QR Suite</h1>
-          <p>
-            Генератор, пакетная сборка и сканер QR-кодов. Полностью офлайн, с поддержкой всех ключевых
-            форматов и автосохранением черновиков в IndexedDB.
-          </p>
-        </div>
-        <div className="page__hero-meta">
-          <span>Коррекция H</span>
-          <span>10k файлов</span>
-          <span>Web Worker</span>
-        </div>
-      </header>
-
-      <Generator />
+      <GeneratorNew />
       <BatchGenerator />
       <Scanner />
 

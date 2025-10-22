@@ -10,5 +10,8 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# TypeScript
+*.tsbuildinfo
+
 # worker build output
 public/workers/*.js.map
