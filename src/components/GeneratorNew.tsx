@@ -122,12 +122,18 @@ const COLOR_PRESETS = [
   { name: "Закат", emoji: "🌅", fg: "#ff6b35", bg: "#ffe5d9" }
 ];
 
-// Template mapping for QR types
+// Template mapping for QR types - ALL 10 TYPES
 const QR_TEMPLATES = [
-  { type: "url", emoji: "🌐", name: "Веб-сайт", desc: "Ссылка на сайт" },
-  { type: "wifi", emoji: "📶", name: "Wi-Fi", desc: "Подключение к сети" },
-  { type: "vcard", emoji: "👤", name: "Визитка", desc: "Контактные данные" },
-  { type: "text", emoji: "📄", name: "Текст", desc: "Произвольный текст" }
+  { type: "url", emoji: "🌐", name: "URL", desc: "Ссылка на сайт" },
+  { type: "text", emoji: "📄", name: "Текст", desc: "Произвольный текст" },
+  { type: "tel", emoji: "📞", name: "Телефон", desc: "Звонок" },
+  { type: "sms", emoji: "💬", name: "SMS", desc: "Сообщение" },
+  { type: "mailto", emoji: "📧", name: "Email", desc: "Почта" },
+  { type: "geo", emoji: "📍", name: "Геометка", desc: "Координаты" },
+  { type: "wifi", emoji: "📶", name: "Wi-Fi", desc: "Подключение" },
+  { type: "vcard", emoji: "👤", name: "vCard", desc: "Визитка" },
+  { type: "mecard", emoji: "💳", name: "MeCard", desc: "Компакт визитка" },
+  { type: "ics", emoji: "📅", name: "Событие", desc: "Календарь" }
 ];
 
 // Style presets
@@ -371,11 +377,6 @@ export function GeneratorNew() {
 
   return (
     <section className={styles.generator}>
-      <div className={styles.header}>
-        <h1 className={styles.headerTitle}>QR Generator</h1>
-        <p className={styles.headerSubtitle}>Создавайте красивые QR-коды для ваших проектов</p>
-      </div>
-
       <div className={styles.qrPreview}>
         <div className={styles.qrCode}>
           <div ref={containerRef} />
@@ -416,49 +417,61 @@ export function GeneratorNew() {
       <div className={classNames(styles.tabContent, { [styles.tabContentActive]: activeTab === "content" })}>
         <div className={styles.inputGroup}>
           <label className={styles.inputLabel}>
-            <span>🔗 {activeDefinition.title}</span>
-            <span className={styles.badge}>Обязательно</span>
+            <span>Выберите тип QR-кода</span>
+          </label>
+          <div className={styles.templateGrid}>
+            {QR_TEMPLATES.map((template) => (
+              <div
+                key={template.type}
+                className={classNames(styles.templateCard, {
+                  [styles.templateCardActive]: draft.type === template.type
+                })}
+                onClick={() => switchType(template.type as QRType)}
+              >
+                <div className={styles.templateName}>{template.emoji} {template.name}</div>
+                <div className={styles.templateDesc}>{template.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.divider}></div>
+
+        <div className={styles.inputGroup}>
+          <label className={styles.inputLabel}>
+            <span>{activeDefinition.title}</span>
+            <span className={styles.badge}>{activeDefinition.description}</span>
           </label>
           {activeDefinition.fields.map((field) => (
-            field.type === "textarea" ? (
-              <textarea
-                key={field.name}
-                className={classNames(styles.textarea, { error: Boolean(errors[field.name]) })}
-                value={formValues[field.name] ?? ""}
-                onChange={(e) => updateValue(field.name, e.target.value)}
-                placeholder={field.placeholder}
-              />
-            ) : (
-              <input
-                key={field.name}
-                type={field.type === "email" ? "email" : "text"}
-                className={classNames(styles.input, { error: Boolean(errors[field.name]) })}
-                value={formValues[field.name] ?? ""}
-                onChange={(e) => updateValue(field.name, e.target.value)}
-                placeholder={field.placeholder}
-              />
-            )
+            <div key={field.name} className={styles.inputGroup}>
+              <label className={styles.inputLabel}>
+                <span>{field.label}{field.required && " *"}</span>
+              </label>
+              {field.type === "textarea" ? (
+                <textarea
+                  className={classNames(styles.textarea, { error: Boolean(errors[field.name]) })}
+                  value={formValues[field.name] ?? ""}
+                  onChange={(e) => updateValue(field.name, e.target.value)}
+                  placeholder={field.placeholder}
+                />
+              ) : (
+                <input
+                  type={field.type === "email" ? "email" : field.type === "number" ? "number" : "text"}
+                  className={classNames(styles.input, { error: Boolean(errors[field.name]) })}
+                  value={formValues[field.name] ?? ""}
+                  onChange={(e) => updateValue(field.name, e.target.value)}
+                  placeholder={field.placeholder}
+                />
+              )}
+              {field.helper && <small style={{ fontSize: "12px", opacity: 0.6, marginTop: "4px" }}>{field.helper}</small>}
+              {errors[field.name] && <span className="error-text">{errors[field.name]}</span>}
+            </div>
           ))}
           {errors.__payload && <span className="error-text">{errors.__payload}</span>}
         </div>
 
         <div className={styles.infoCard}>
-          💡 <strong>Совет:</strong> Используйте короткие ссылки для лучшего сканирования QR-кода
-        </div>
-
-        <div className={styles.templateGrid}>
-          {QR_TEMPLATES.map((template) => (
-            <div
-              key={template.type}
-              className={classNames(styles.templateCard, {
-                [styles.templateCardActive]: draft.type === template.type
-              })}
-              onClick={() => switchType(template.type as QRType)}
-            >
-              <div className={styles.templateName}>{template.emoji} {template.name}</div>
-              <div className={styles.templateDesc}>{template.desc}</div>
-            </div>
-          ))}
+          💡 <strong>Совет:</strong> Используйте короткие данные для лучшего сканирования QR-кода. Длина: {byteLength} / {MAX_PAYLOAD_BYTES} байт
         </div>
       </div>
 

@@ -168,21 +168,29 @@
 .templateGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
+@media (min-width: 480px) {
+  .templateGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .templateCard {
-  padding: 16px;
+  padding: 12px;
   border: 2px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
   background: var(--surface);
-  min-height: var(--tap-target-min);
+  min-height: 70px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .templateCard:hover {
@@ -198,14 +206,16 @@
 
 .templateName {
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: var(--text);
+  font-size: 13px;
 }
 
 .templateDesc {
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.6;
   color: var(--hint);
+  line-height: 1.3;
 }
 
 .infoCard {
