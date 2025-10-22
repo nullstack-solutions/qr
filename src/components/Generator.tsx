@@ -136,9 +136,19 @@ export function Generator() {
   const [byteLength, setByteLength] = useState(0);
   const [QRCodeStylingCtor, setQRCodeStylingCtor] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const qrRef = useRef<any>();
 
   const activeDefinition = useMemo(() => getTypeDefinition(draft.type), [draft.type]);
+
+  const scrollToQR = useCallback(() => {
+    if (!previewRef.current) return;
+    triggerHaptic('light');
+    previewRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  }, []);
 
   const updateStyle = useCallback(
     (update: Partial<StyleOptions>) => {
@@ -805,9 +815,12 @@ export function Generator() {
             ) : null}
           </div>
 
-          <div className="preview" aria-live="polite">
+          <div className="preview" aria-live="polite" ref={previewRef}>
             <div ref={containerRef} className="preview__canvas" />
             <div className="preview__actions">
+              <button type="button" onClick={scrollToQR} className="secondary" title="Центрировать QR код">
+                📍 Показать
+              </button>
               <button type="button" onClick={() => exportBlob("png")} className="primary">
                 Скачать PNG
               </button>
