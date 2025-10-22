@@ -8,12 +8,14 @@
   box-sizing: border-box;
 }
 
+/* TMA Premium Design System - Global Styles */
+
 html, body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: var(--tg-bg, #ffffff);
-  color: var(--tg-text, #000000);
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
