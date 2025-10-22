@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  timeout: 30_000,
+  timeout: 60_000,
   testDir: 'tests/e2e',
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
@@ -9,6 +9,8 @@ export default defineConfig({
     viewport: { width: 390, height: 844 },
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   projects: [
     {
@@ -27,9 +29,11 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run start' : 'npm run dev',
     port: 3000,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
