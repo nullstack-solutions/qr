@@ -15,3 +15,8 @@ yarn-error.log*
 
 # worker build output
 public/workers/*.js.map
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
