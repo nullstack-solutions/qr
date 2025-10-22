@@ -21,12 +21,20 @@ export function TelegramThemeProvider({ children }: TelegramThemeProviderProps) 
     WebApp.ready();
     WebApp.expand();
 
-    // Apply theme parameters
+    // Apply theme parameters - TMA Premium Design System
     const applyTheme = () => {
       const theme = WebApp.themeParams;
       const root = document.documentElement;
 
-      // Set CSS custom properties
+      // TMA Premium Design System variables
+      root.style.setProperty('--bg', theme.bg_color || '#ffffff');
+      root.style.setProperty('--text', theme.text_color || '#000000');
+      root.style.setProperty('--hint', theme.hint_color || '#6d6d6d');
+      root.style.setProperty('--accent', theme.link_color || '#3390ec');
+      root.style.setProperty('--surface', theme.secondary_bg_color || '#f0f0f0');
+      root.style.setProperty('--button', theme.button_color || '#3390ec');
+
+      // Legacy Telegram variables for backwards compatibility
       root.style.setProperty('--tg-bg', theme.bg_color || '#ffffff');
       root.style.setProperty('--tg-text', theme.text_color || '#000000');
       root.style.setProperty('--tg-hint', theme.hint_color || 'rgba(0, 0, 0, 0.5)');
