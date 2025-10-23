@@ -29,12 +29,14 @@
 .qrPreview {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 24px;
-  padding: 32px;
-  margin-bottom: 24px;
+  padding: clamp(16px, 6vw, 32px);
+  margin: 0 auto 24px;
+  width: min(100%, 420px);
+  max-width: min(420px, calc(100vw - 32px));
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 300px;
+  min-height: clamp(240px, 60vw, 320px);
   position: relative;
   overflow: hidden;
   animation: fadeIn 0.6s ease;
@@ -52,8 +54,11 @@
 }
 
 .qrCode {
+  --qr-max-height: clamp(160px, calc(100vh - 220px), 360px);
+  --qr-max-width: clamp(160px, calc(100vw - 96px), 360px);
+  --qr-output-size: min(100%, var(--qr-max-width), var(--qr-max-height));
   background: white;
-  padding: 24px;
+  padding: clamp(12px, 4vw, 24px);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   position: relative;
@@ -61,8 +66,20 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  width: var(--qr-output-size);
+  max-width: 100%;
+  max-height: var(--qr-max-height);
   pointer-events: none;
   user-select: none;
+}
+
+.qrCode :global(canvas),
+.qrCode :global(svg) {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: var(--qr-max-height) !important;
+  object-fit: contain;
 }
 
 .tabs {
@@ -98,8 +115,9 @@
 }
 
 .tabActive {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.18) 0%, rgba(118, 75, 162, 0.18) 100%);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  color: var(--text);
 }
 
 .tabContent {
@@ -488,6 +506,32 @@
 .btnSecondary:active {
   transform: scale(0.98);
   background: rgba(102, 126, 234, 0.12);
+}
+
+.tab:focus-visible,
+.templateCard:focus-visible,
+.styleOption:focus-visible,
+.colorPreview:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 17, 26, 0.45), 0 0 0 4px rgba(102, 126, 234, 0.45);
+  background-color: rgba(102, 126, 234, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tabActive {
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+    background: linear-gradient(135deg, rgba(100, 181, 246, 0.18) 0%, rgba(118, 75, 162, 0.18) 100%);
+  }
+
+  .tab:focus-visible,
+  .templateCard:focus-visible,
+  .styleOption:focus-visible,
+  .colorPreview:focus-visible,
+  .btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.6), 0 0 0 4px rgba(100, 181, 246, 0.55);
+    background-color: rgba(100, 181, 246, 0.18);
+  }
 }
 
 .loading {
