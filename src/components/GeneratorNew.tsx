@@ -344,24 +344,58 @@ export function GeneratorNew() {
       setIsLoading(true);
       triggerHaptic('heavy');
 
-      const payload = qrPayload || activeDefinition.buildPayload(formValues);
-      const blob = await qrRef.current.getRawData(format);
-      if (!blob) {
+      try {
+        const payload = qrPayload || activeDefinition.buildPayload(formValues);
+        const blob = await qrRef.current.getRawData(format);
+        if (!blob) {
+          return;
+        }
+
+        const slug =
+          payload
+            .slice(0, 32)
+            .replace(/[^a-z0-9]+/gi, "-")
+            .replace(/^-|-$/g, "")
+            .toLowerCase() || "qr";
+        const fileName = `${slug}.${format}`;
+        const mimeType = format === "svg" ? "image/svg+xml" : "image/png";
+        const nav = typeof window !== "undefined" ? window.navigator : undefined;
+
+        if (nav && typeof nav.share === "function" && typeof File !== "undefined") {
+          const filesSupported = typeof nav.canShare === "function";
+          const shareFile = new File([blob], fileName, { type: mimeType });
+
+          if (!filesSupported || nav.canShare({ files: [shareFile] })) {
+            try {
+              await nav.share({
+                files: [shareFile],
+                title: "QR код",
+                text: payload
+              });
+              return;
+            } catch (error) {
+              if (error instanceof DOMException && error.name === "AbortError") {
+                return;
+              }
+              // fall through to download fallback if sharing fails for another reason
+            }
+          }
+        }
+
+        const url = URL.createObjectURL(blob);
+        try {
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const slug = payload.slice(0, 32).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "qr";
-      link.href = url;
-      link.download = `${slug}.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setIsLoading(false);
     },
     [regenerate, qrPayload, activeDefinition, formValues]
   );

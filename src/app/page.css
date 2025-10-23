@@ -172,6 +172,16 @@
   background: rgba(51, 144, 236, 0.12);
 }
 
+.pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 17, 26, 0.16), 0 0 0 4px rgba(51, 144, 236, 0.45);
+  border-color: rgba(51, 144, 236, 0.45);
+}
+
+.pill:not(.pill__active):focus-visible {
+  background: rgba(51, 144, 236, 0.12);
+}
+
 .pill strong {
   font-size: var(--font-body);
   font-weight: 600;
@@ -194,6 +204,15 @@
   }
 
   .pill:active {
+    background: rgba(100, 181, 246, 0.18);
+  }
+
+  .pill:focus-visible {
+    box-shadow: 0 0 0 2px rgba(5, 7, 11, 0.7), 0 0 0 4px rgba(100, 181, 246, 0.55);
+    border-color: rgba(100, 181, 246, 0.55);
+  }
+
+  .pill:not(.pill__active):focus-visible {
     background: rgba(100, 181, 246, 0.18);
   }
 }
