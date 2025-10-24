@@ -70,7 +70,7 @@ const QR_TYPES = [
   {
     type: "sms",
     title: "SMS",
-    description: "sms: номер и текст",
+    description: "SMSTO: номер и текст",
     fields: [
       {
         name: "phone",
@@ -82,15 +82,13 @@ const QR_TYPES = [
         name: "message",
         label: "Сообщение",
         type: "textarea",
-        placeholder: "Текст SMS",
-        required: true
+        placeholder: "Текст SMS"
       }
     ],
     buildPayload: (values) => {
       const phone = values.phone?.replace(/[^\d+]/g, "") ?? "";
-      const message = values.message?.trim() ?? "";
-      if (!phone || !message) return "";
-      return `sms:${phone}?body=${encodeURIComponent(message)}`;
+      const text = encodeURIComponent(values.message ?? "");
+      return `SMSTO:${phone}:${text}`;
     }
   },
   {
