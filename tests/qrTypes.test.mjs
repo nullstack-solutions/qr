@@ -18,7 +18,7 @@ test("SMS payload encodes message and strips phone decorations", () => {
   const def = getTypeDefinition("sms");
   assert.equal(
     def.buildPayload({ phone: "+7 (900) 123-45-67", message: "Привет!" }),
-    "sms:+79001234567?body=%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82!"
+    "SMSTO:+79001234567:%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82!"
   );
 });
 
