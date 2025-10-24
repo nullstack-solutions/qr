@@ -21,6 +21,47 @@ function degreesToRadians(degrees: number) {
   return (degrees * Math.PI) / 180;
 }
 
+// Validate HEX color code
+function isValidHex(hex: string): boolean {
+  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex);
+}
+
+// Normalize HEX code (add # if missing, expand 3-char to 6-char)
+function normalizeHex(hex: string): string {
+  let normalized = hex.trim();
+  if (!normalized.startsWith('#')) {
+    normalized = '#' + normalized;
+  }
+  // Expand 3-char hex to 6-char
+  if (normalized.length === 4) {
+    normalized = '#' + normalized[1] + normalized[1] + normalized[2] + normalized[2] + normalized[3] + normalized[3];
+  }
+  return normalized.toUpperCase();
+}
+
+// Calculate relative luminance (WCAG formula)
+function getLuminance(hex: string): number {
+  const rgb = parseInt(hex.slice(1), 16);
+  const r = ((rgb >> 16) & 0xff) / 255;
+  const g = ((rgb >> 8) & 0xff) / 255;
+  const b = (rgb & 0xff) / 255;
+
+  const srgb = [r, g, b].map(val =>
+    val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4)
+  );
+
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+// Calculate contrast ratio (WCAG)
+function getContrastRatio(hex1: string, hex2: string): number {
+  const lum1 = getLuminance(hex1);
+  const lum2 = getLuminance(hex2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 type ErrorCorrection = "L" | "M" | "Q" | "H";
 
 type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
@@ -139,6 +180,13 @@ export function Generator() {
   const previewRef = useRef<HTMLDivElement | null>(null);
   const qrRef = useRef<any>();
 
+  // New states for spec compliance
+  const [hexErrors, setHexErrors] = useState<{ foreground?: string; background?: string }>({});
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"png" | "svg">("png");
+  const [exportSize, setExportSize] = useState<number>(1000);
+  const [showTypeSwitch, setShowTypeSwitch] = useState<QRType | null>(null);
+
   const activeDefinition = useMemo(() => getTypeDefinition(draft.type), [draft.type]);
 
   const scrollToQR = useCallback(() => {
@@ -170,8 +218,21 @@ export function Generator() {
     [setDraft]
   );
 
+  const hasFormData = useMemo(() => {
+    return activeDefinition.fields.some((field) => {
+      const key = fieldKey(draft.type, field.name);
+      return Boolean(draft.formValues[key]?.trim());
+    });
+  }, [draft.formValues, draft.type, activeDefinition.fields]);
+
   const switchType = useCallback(
     (type: QRType) => {
+      // Check if user has entered data
+      if (hasFormData && type !== draft.type) {
+        setShowTypeSwitch(type);
+        return;
+      }
+
       triggerHaptic('light');
       setErrors({});
       setDraft((prev) => ({
@@ -181,8 +242,54 @@ export function Generator() {
         style: prev.style
       }));
     },
+    [setDraft, hasFormData, draft.type]
+  );
+
+  const confirmTypeSwitch = useCallback(
+    (type: QRType) => {
+      triggerHaptic('medium');
+      setErrors({});
+      setShowTypeSwitch(null);
+      setDraft((prev) => ({
+        ...prev,
+        type,
+        formValues: prev.formValues,
+        style: prev.style
+      }));
+    },
     [setDraft]
   );
+
+  const handleHexInput = useCallback(
+    (field: 'foreground' | 'background', value: string) => {
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        setHexErrors(prev => ({ ...prev, [field]: undefined }));
+        return;
+      }
+
+      if (!isValidHex(trimmed)) {
+        setHexErrors(prev => ({ ...prev, [field]: 'Enter a valid hex code' }));
+        return;
+      }
+
+      const normalized = normalizeHex(trimmed);
+      setHexErrors(prev => ({ ...prev, [field]: undefined }));
+      updateStyle({ [field]: normalized });
+    },
+    [updateStyle]
+  );
+
+  const contrastRatio = useMemo(() => {
+    try {
+      return getContrastRatio(draft.style.foreground, draft.style.background);
+    } catch {
+      return 0;
+    }
+  }, [draft.style.foreground, draft.style.background]);
+
+  const hasLowContrast = contrastRatio > 0 && contrastRatio < 4.5;
 
   useEffect(() => {
     import("qr-code-styling").then((module) => {
@@ -339,26 +446,88 @@ export function Generator() {
     [updateStyle]
   );
 
+  const openExportDialog = useCallback((format: "png" | "svg") => {
+    // Check if QR is valid before opening dialog
+    const ok = regenerate();
+    if (!ok) return;
+
+    setExportFormat(format);
+    setShowExportDialog(true);
+    triggerHaptic('light');
+  }, [regenerate]);
+
   const exportBlob = useCallback(
-    async (format: "png" | "svg") => {
+    async () => {
       if (!qrRef.current) return;
-      const ok = regenerate();
-      if (!ok) return;
+
       triggerHaptic('heavy');
+
+      // Temporarily update size for export
+      const originalSize = draft.style.size;
+      const exportOptions: any = {
+        data: qrPayload,
+        width: exportSize,
+        height: exportSize,
+        image: draft.style.logoDataUrl,
+        shape: draft.style.shape,
+        qrOptions: {
+          errorCorrectionLevel: draft.style.errorCorrection,
+          margin: draft.style.margin,
+          mode: "Byte"
+        },
+        dotsOptions: {
+          ...(draft.style.useDotsGradient && draft.style.dotsGradient
+            ? { gradient: draft.style.dotsGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.dotStyle
+        },
+        backgroundOptions: {
+          ...(draft.style.useBackgroundGradient && draft.style.backgroundGradient
+            ? { gradient: draft.style.backgroundGradient }
+            : { color: draft.style.background })
+        },
+        cornersSquareOptions: {
+          ...(draft.style.useCornersGradient && draft.style.cornersGradient
+            ? { gradient: draft.style.cornersGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.eyeOuter
+        },
+        cornersDotOptions: {
+          ...(draft.style.useCornersGradient && draft.style.cornersGradient
+            ? { gradient: draft.style.cornersGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.eyeInner
+        },
+        imageOptions: {
+          imageSize: draft.style.logoSize / 100,
+          margin: 4,
+          hideBackgroundDots: draft.style.hideBackgroundDots
+        }
+      };
+
+      qrRef.current.update(exportOptions);
+
       const payload = qrPayload || activeDefinition.buildPayload(formValues);
-      const blob = await qrRef.current.getRawData(format);
+      const blob = await qrRef.current.getRawData(exportFormat);
+
+      // Restore original size
+      qrRef.current.update({ ...exportOptions, width: originalSize, height: originalSize });
+
       if (!blob) return;
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       const slug = payload.slice(0, 32).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "qr";
       link.href = url;
-      link.download = `${slug}.${format}`;
+      link.download = `${slug}.${exportFormat}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      setShowExportDialog(false);
     },
-    [regenerate, qrPayload, activeDefinition, formValues]
+    [qrPayload, activeDefinition, formValues, exportFormat, exportSize, draft.style]
   );
 
   return (
@@ -460,21 +629,74 @@ export function Generator() {
             </label>
 
             <label className="panel__field">
-              <span>Цвет точек</span>
-              <input
-                type="color"
-                value={draft.style.foreground}
-                onChange={(event) => updateStyle({ foreground: event.target.value })}
-              />
+              <span>Цвет точек (HEX)</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={draft.style.foreground}
+                  onChange={(event) => handleHexInput('foreground', event.target.value)}
+                  placeholder="#000000"
+                  maxLength={7}
+                  className={classNames({ error: Boolean(hexErrors.foreground) })}
+                  style={{ flex: 1 }}
+                />
+                <input
+                  type="color"
+                  value={draft.style.foreground}
+                  onChange={(event) => updateStyle({ foreground: event.target.value })}
+                  style={{ width: '48px', height: '48px', cursor: 'pointer', padding: '2px' }}
+                  title="Выбрать цвет"
+                />
+              </div>
+              {hexErrors.foreground && <span className="error-text">{hexErrors.foreground}</span>}
             </label>
 
             <label className="panel__field">
-              <span>Цвет фона</span>
+              <span>Цвет фона (HEX)</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={draft.style.background}
+                  onChange={(event) => handleHexInput('background', event.target.value)}
+                  placeholder="#FFFFFF"
+                  maxLength={7}
+                  className={classNames({ error: Boolean(hexErrors.background) })}
+                  style={{ flex: 1 }}
+                />
+                <input
+                  type="color"
+                  value={draft.style.background}
+                  onChange={(event) => updateStyle({ background: event.target.value })}
+                  style={{ width: '48px', height: '48px', cursor: 'pointer', padding: '2px' }}
+                  title="Выбрать цвет"
+                />
+              </div>
+              {hexErrors.background && <span className="error-text">{hexErrors.background}</span>}
+            </label>
+
+            {hasLowContrast && (
+              <div style={{
+                padding: '12px',
+                background: 'rgba(255, 193, 7, 0.1)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: 'var(--text)'
+              }}>
+                ⚠️ Adjust colors for better scannability (contrast: {contrastRatio.toFixed(2)}:1, recommended: ≥4.5:1)
+              </div>
+            )}
+
+            <label className="panel__field">
+              <span>Внешний отступ (модули)</span>
               <input
-                type="color"
-                value={draft.style.background}
-                onChange={(event) => updateStyle({ background: event.target.value })}
+                type="range"
+                min={0}
+                max={10}
+                value={draft.style.margin}
+                onChange={(event) => updateStyle({ margin: Number(event.target.value) })}
               />
+              <strong>{draft.style.margin}</strong>
             </label>
 
             <label className="panel__field">
@@ -577,11 +799,11 @@ export function Generator() {
                 value={draft.style.dotStyle}
                 onChange={(event) => updateStyle({ dotStyle: event.target.value as DotStyle })}
               >
-                <option value="square">Квадрат</option>
-                <option value="rounded">Скруглённый</option>
-                <option value="extra-rounded">Очень скруглённый</option>
-                <option value="dots">Точки</option>
-                <option value="classy">Classy</option>
+                <option value="square">Classic (квадрат)</option>
+                <option value="rounded">Rounded (скруглённый)</option>
+                <option value="dots">Circles (круги)</option>
+                <option value="classy">Smooth (сглаженный)</option>
+                <option value="extra-rounded">Thin (тонкий)</option>
                 <option value="classy-rounded">Classy Rounded</option>
               </select>
             </label>
@@ -821,16 +1043,187 @@ export function Generator() {
               <button type="button" onClick={scrollToQR} className="secondary" title="Центрировать QR код">
                 📍 Показать
               </button>
-              <button type="button" onClick={() => exportBlob("png")} className="primary">
+              <button
+                type="button"
+                onClick={() => openExportDialog("png")}
+                className="primary"
+                disabled={Object.keys(errors).length > 0 || Object.keys(hexErrors).length > 0}
+              >
                 Скачать PNG
               </button>
-              <button type="button" onClick={() => exportBlob("svg")} className="secondary">
+              <button
+                type="button"
+                onClick={() => openExportDialog("svg")}
+                className="secondary"
+                disabled={Object.keys(errors).length > 0 || Object.keys(hexErrors).length > 0}
+              >
                 Скачать SVG
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Export size dialog */}
+      {showExportDialog && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}
+          onClick={() => setShowExportDialog(false)}
+        >
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: 700 }}>
+              Экспорт {exportFormat.toUpperCase()}
+            </h3>
+            <p style={{ margin: '0 0 16px', color: 'var(--hint)', fontSize: '14px' }}>
+              Выберите размер для экспорта:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {[100, 200, 1000, 2000].map((size) => (
+                <label
+                  key={size}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '12px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: exportSize === size ? 'rgba(51, 144, 236, 0.1)' : 'transparent'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="export-size"
+                    value={size}
+                    checked={exportSize === size}
+                    onChange={(e) => setExportSize(Number(e.target.value))}
+                    style={{ marginRight: '12px' }}
+                  />
+                  <span style={{ fontWeight: exportSize === size ? 600 : 400 }}>
+                    {size} × {size} px
+                  </span>
+                </label>
+              ))}
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  gap: '12px'
+                }}
+              >
+                <span>Custom:</span>
+                <input
+                  type="number"
+                  min={100}
+                  max={5000}
+                  value={exportSize}
+                  onChange={(e) => setExportSize(Number(e.target.value))}
+                  style={{ flex: 1, padding: '8px' }}
+                />
+                <span>px</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowExportDialog(false)}
+                className="secondary"
+                style={{ flex: 1 }}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={exportBlob}
+                className="primary"
+                style={{ flex: 1 }}
+              >
+                Скачать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Type switch confirmation dialog */}
+      {showTypeSwitch && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}
+          onClick={() => setShowTypeSwitch(null)}
+        >
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px', fontSize: '20px', fontWeight: 700 }}>
+              Discard changes?
+            </h3>
+            <p style={{ margin: '0 0 24px', color: 'var(--hint)', fontSize: '14px' }}>
+              Вы ввели данные в текущую форму. При переключении типа данные сохранятся, но будут недоступны для нового типа QR-кода.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowTypeSwitch(null)}
+                className="secondary"
+                style={{ flex: 1 }}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={() => showTypeSwitch && confirmTypeSwitch(showTypeSwitch)}
+                className="primary"
+                style={{ flex: 1 }}
+              >
+                Продолжить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
