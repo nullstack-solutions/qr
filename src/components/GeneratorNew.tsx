@@ -236,11 +236,52 @@ export function GeneratorNew() {
     [setDraft]
   );
 
+  const maxLogoSize = useMemo(() => {
+    const limits: Record<ErrorCorrection, number> = {
+      L: 15,
+      M: 20,
+      Q: 25,
+      H: 30
+    };
+    return limits[draft.style.errorCorrection] ?? 30;
+  }, [draft.style.errorCorrection]);
+
+  const logoSizeExceedsLimit = Boolean(
+    draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize
+  );
+
+  useEffect(() => {
+    if (draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize) {
+      updateStyle({ logoSize: maxLogoSize });
+    }
+  }, [draft.style.logoDataUrl, draft.style.logoSize, maxLogoSize, updateStyle]);
+
   useEffect(() => {
     import("qr-code-styling").then((module) => {
       setQRCodeStylingCtor(() => module.default);
     });
   }, []);
+
+  const handleFileUpload = useCallback(
+    (file: File | null) => {
+      if (!file) {
+        triggerHaptic('light');
+        updateStyle({ logoDataUrl: undefined });
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        triggerHaptic('light');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        triggerHaptic('medium');
+        updateStyle({ logoDataUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    },
+    [updateStyle]
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -631,6 +672,84 @@ export function GeneratorNew() {
             {" "}Подберите более контрастные цвета для лучшей сканируемости QR-кода.
           </div>
         )}
+
+        <div className={styles.divider}></div>
+
+        <div className={styles.inputGroup}>
+          <label className={styles.inputLabel}>
+            <span>🪪 Логотип в центре</span>
+            <span className={styles.badge}>
+              {draft.style.logoDataUrl
+                ? `Макс ${maxLogoSize}% при ${draft.style.errorCorrection}`
+                : "Рекомендуем Q или H"}
+            </span>
+          </label>
+
+          <div className={styles.logoControls}>
+            <div className={styles.logoButtons}>
+              <label className={styles.logoUploadButton}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  className={styles.logoUploadInput}
+                  onChange={(event) => handleFileUpload(event.target.files?.[0] ?? null)}
+                />
+                {draft.style.logoDataUrl ? "Заменить логотип" : "Загрузить логотип"}
+              </label>
+              {draft.style.logoDataUrl && (
+                <button
+                  type="button"
+                  className={styles.logoRemoveButton}
+                  onClick={() => handleFileUpload(null)}
+                >
+                  Удалить
+                </button>
+              )}
+            </div>
+
+            {draft.style.logoDataUrl && (
+              <>
+                <div className={styles.logoPreview}>
+                  <img src={draft.style.logoDataUrl} alt="Предпросмотр логотипа" />
+                  <div className={styles.logoHint}>Логотип будет размещён по центру QR-кода.</div>
+                </div>
+
+                <div className={styles.rangeGroup}>
+                  <label className={styles.inputLabel}>
+                    <span>Размер логотипа</span>
+                    <span className={styles.rangeValue}>
+                      {Math.min(draft.style.logoSize, maxLogoSize)}%
+                    </span>
+                  </label>
+                  <input
+                    type="range"
+                    className={styles.rangeInput}
+                    min={10}
+                    max={maxLogoSize}
+                    value={Math.min(draft.style.logoSize, maxLogoSize)}
+                    onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
+                  />
+                </div>
+
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={draft.style.hideBackgroundDots}
+                    onChange={(event) => updateStyle({ hideBackgroundDots: event.target.checked })}
+                  />
+                  <span>Скрыть точки под логотипом</span>
+                </label>
+
+                {logoSizeExceedsLimit && (
+                  <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
+                    ⚠️ Логотип автоматически уменьшен до {maxLogoSize}% из-за текущего уровня коррекции ошибок.
+                    Увеличьте коррекцию для более крупного изображения.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
         <div className={styles.divider}></div>
 
