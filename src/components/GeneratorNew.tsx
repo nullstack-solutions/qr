@@ -14,6 +14,43 @@ function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
   }
 }
 
+function hexToRgb(hex: string) {
+  const sanitized = hex.replace('#', '');
+  if (sanitized.length === 3) {
+    const r = parseInt(sanitized[0] + sanitized[0], 16);
+    const g = parseInt(sanitized[1] + sanitized[1], 16);
+    const b = parseInt(sanitized[2] + sanitized[2], 16);
+    return { r, g, b };
+  }
+  if (sanitized.length !== 6) {
+    return null;
+  }
+  const r = parseInt(sanitized.slice(0, 2), 16);
+  const g = parseInt(sanitized.slice(2, 4), 16);
+  const b = parseInt(sanitized.slice(4, 6), 16);
+  if ([r, g, b].some((component) => Number.isNaN(component))) {
+    return null;
+  }
+  return { r, g, b };
+}
+
+function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }) {
+  const srgb = [r, g, b].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+function getContrastRatio(foreground: string, background: string) {
+  const fg = hexToRgb(foreground);
+  const bg = hexToRgb(background);
+  if (!fg || !bg) return 0;
+  const l1 = relativeLuminance(fg) + 0.05;
+  const l2 = relativeLuminance(bg) + 0.05;
+  return l1 > l2 ? l1 / l2 : l2 / l1;
+}
+
 function radiansToDegrees(radians?: number) {
   return Math.round(((radians ?? 0) * 180) / Math.PI);
 }
@@ -230,10 +267,21 @@ export function GeneratorNew() {
     const scoped: Record<string, string> = {};
     for (const field of activeDefinition.fields) {
       const key = fieldKey(draft.type, field.name);
-      scoped[field.name] = draft.formValues[key] ?? "";
+      const stored = draft.formValues[key];
+      if (stored === undefined && field.prefill !== undefined) {
+        scoped[field.name] = field.prefill;
+      } else {
+        scoped[field.name] = stored ?? "";
+      }
     }
     return scoped;
   }, [draft.formValues, draft.type, activeDefinition.fields]);
+
+  const contrastRatio = useMemo(
+    () => getContrastRatio(draft.style.foreground, draft.style.background),
+    [draft.style.foreground, draft.style.background]
+  );
+  const showContrastWarning = contrastRatio > 0 && contrastRatio < 4.5;
 
   const regenerate = useCallback(() => {
     if (!qrRef.current) return false;
@@ -401,12 +449,9 @@ export function GeneratorNew() {
   );
 
   const isLightColor = (color: string) => {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128;
+    const rgb = hexToRgb(color);
+    if (!rgb) return false;
+    return relativeLuminance(rgb) > 0.5;
   };
 
   return (
@@ -579,6 +624,13 @@ export function GeneratorNew() {
             </div>
           </div>
         </div>
+
+        {showContrastWarning && (
+          <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
+            ⚠️ <strong>Низкий контраст:</strong> текущее соотношение {contrastRatio.toFixed(2)}:1.
+            {" "}Подберите более контрастные цвета для лучшей сканируемости QR-кода.
+          </div>
+        )}
 
         <div className={styles.divider}></div>
 
