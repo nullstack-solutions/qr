@@ -293,9 +293,9 @@ export function GeneratorNew() {
         height: defaultStyle.size,
         data: "https://t.me/durov",
         image: undefined,
+        margin: defaultStyle.margin,
         qrOptions: {
           errorCorrectionLevel: defaultStyle.errorCorrection,
-          margin: defaultStyle.margin,
           mode: "Byte"
         }
       });
@@ -374,9 +374,9 @@ export function GeneratorNew() {
       height: draft.style.size,
       image: draft.style.logoDataUrl,
       shape: draft.style.shape,
+      margin: draft.style.margin,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
-        margin: draft.style.margin,
         mode: "Byte"
       },
       dotsOptions: {

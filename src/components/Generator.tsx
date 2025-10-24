@@ -220,9 +220,9 @@ export function Generator() {
         height: defaultStyle.size,
         data: "https://example.com",
         image: undefined,
+        margin: defaultStyle.margin,
         qrOptions: {
           errorCorrectionLevel: defaultStyle.errorCorrection,
-          margin: defaultStyle.margin,
           mode: "Byte"
         }
       });
@@ -291,9 +291,9 @@ export function Generator() {
       height: draft.style.size,
       image: draft.style.logoDataUrl,
       shape: draft.style.shape,
+      margin: draft.style.margin,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
-        margin: draft.style.margin,
         mode: "Byte"
       },
       dotsOptions: {
