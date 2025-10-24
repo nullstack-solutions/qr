@@ -291,6 +291,26 @@ export function Generator() {
 
   const hasLowContrast = contrastRatio > 0 && contrastRatio < 4.5;
 
+  // Calculate max logo size based on error correction level
+  const maxLogoSize = useMemo(() => {
+    const limits: Record<ErrorCorrection, number> = {
+      'L': 15,  // 7% error correction
+      'M': 20,  // 15% error correction
+      'Q': 25,  // 25% error correction
+      'H': 30   // 30% error correction
+    };
+    return limits[draft.style.errorCorrection] || 30;
+  }, [draft.style.errorCorrection]);
+
+  const logoSizeExceedsLimit = draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize;
+
+  // Auto-adjust logo size when error correction changes
+  useEffect(() => {
+    if (draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize) {
+      updateStyle({ logoSize: maxLogoSize });
+    }
+  }, [draft.style.errorCorrection, maxLogoSize, draft.style.logoDataUrl, draft.style.logoSize, updateStyle]);
+
   useEffect(() => {
     import("qr-code-styling").then((module) => {
       setQRCodeStylingCtor(() => module.default);
@@ -624,8 +644,13 @@ export function Generator() {
                 <option value="L">L — до 7%</option>
                 <option value="M">M — до 15%</option>
                 <option value="Q">Q — до 25%</option>
-                <option value="H">H — до 30%</option>
+                <option value="H">H — до 30% (рекомендуется для логотипа)</option>
               </select>
+              {draft.style.logoDataUrl && (
+                <small style={{ color: 'var(--hint)', marginTop: '4px' }}>
+                  Высокий уровень коррекции (Q/H) позволяет размещать больший логотип
+                </small>
+              )}
             </label>
 
             <label className="panel__field">
@@ -855,16 +880,29 @@ export function Generator() {
             {draft.style.logoDataUrl ? (
               <>
                 <label className="panel__field">
-                  <span>Размер логотипа, %</span>
+                  <span>Размер логотипа, % (макс. {maxLogoSize}% для уровня {draft.style.errorCorrection})</span>
                   <input
                     type="range"
                     min={10}
-                    max={30}
-                    value={draft.style.logoSize}
+                    max={maxLogoSize}
+                    value={Math.min(draft.style.logoSize, maxLogoSize)}
                     onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
                   />
-                  <strong>{draft.style.logoSize}</strong>
+                  <strong>{Math.min(draft.style.logoSize, maxLogoSize)}</strong>
                 </label>
+
+                {logoSizeExceedsLimit && (
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(255, 193, 7, 0.1)',
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color: 'var(--text)'
+                  }}>
+                    ⚠️ Логотип автоматически уменьшен до {maxLogoSize}% из-за низкого уровня коррекции ошибок. Увеличьте уровень коррекции для больших логотипов.
+                  </div>
+                )}
 
                 <label className="panel__field">
                   <span>Скрыть точки под логотипом</span>
