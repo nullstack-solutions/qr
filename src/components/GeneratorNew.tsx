@@ -14,6 +14,43 @@ function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
   }
 }
 
+function hexToRgb(hex: string) {
+  const sanitized = hex.replace('#', '');
+  if (sanitized.length === 3) {
+    const r = parseInt(sanitized[0] + sanitized[0], 16);
+    const g = parseInt(sanitized[1] + sanitized[1], 16);
+    const b = parseInt(sanitized[2] + sanitized[2], 16);
+    return { r, g, b };
+  }
+  if (sanitized.length !== 6) {
+    return null;
+  }
+  const r = parseInt(sanitized.slice(0, 2), 16);
+  const g = parseInt(sanitized.slice(2, 4), 16);
+  const b = parseInt(sanitized.slice(4, 6), 16);
+  if ([r, g, b].some((component) => Number.isNaN(component))) {
+    return null;
+  }
+  return { r, g, b };
+}
+
+function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }) {
+  const srgb = [r, g, b].map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+function getContrastRatio(foreground: string, background: string) {
+  const fg = hexToRgb(foreground);
+  const bg = hexToRgb(background);
+  if (!fg || !bg) return 0;
+  const l1 = relativeLuminance(fg) + 0.05;
+  const l2 = relativeLuminance(bg) + 0.05;
+  return l1 > l2 ? l1 / l2 : l2 / l1;
+}
+
 function radiansToDegrees(radians?: number) {
   return Math.round(((radians ?? 0) * 180) / Math.PI);
 }
@@ -199,11 +236,52 @@ export function GeneratorNew() {
     [setDraft]
   );
 
+  const maxLogoSize = useMemo(() => {
+    const limits: Record<ErrorCorrection, number> = {
+      L: 15,
+      M: 20,
+      Q: 25,
+      H: 30
+    };
+    return limits[draft.style.errorCorrection] ?? 30;
+  }, [draft.style.errorCorrection]);
+
+  const logoSizeExceedsLimit = Boolean(
+    draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize
+  );
+
+  useEffect(() => {
+    if (draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize) {
+      updateStyle({ logoSize: maxLogoSize });
+    }
+  }, [draft.style.logoDataUrl, draft.style.logoSize, maxLogoSize, updateStyle]);
+
   useEffect(() => {
     import("qr-code-styling").then((module) => {
       setQRCodeStylingCtor(() => module.default);
     });
   }, []);
+
+  const handleFileUpload = useCallback(
+    (file: File | null) => {
+      if (!file) {
+        triggerHaptic('light');
+        updateStyle({ logoDataUrl: undefined });
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        triggerHaptic('light');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        triggerHaptic('medium');
+        updateStyle({ logoDataUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    },
+    [updateStyle]
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -230,10 +308,21 @@ export function GeneratorNew() {
     const scoped: Record<string, string> = {};
     for (const field of activeDefinition.fields) {
       const key = fieldKey(draft.type, field.name);
-      scoped[field.name] = draft.formValues[key] ?? "";
+      const stored = draft.formValues[key];
+      if (stored === undefined && field.prefill !== undefined) {
+        scoped[field.name] = field.prefill;
+      } else {
+        scoped[field.name] = stored ?? "";
+      }
     }
     return scoped;
   }, [draft.formValues, draft.type, activeDefinition.fields]);
+
+  const contrastRatio = useMemo(
+    () => getContrastRatio(draft.style.foreground, draft.style.background),
+    [draft.style.foreground, draft.style.background]
+  );
+  const showContrastWarning = contrastRatio > 0 && contrastRatio < 4.5;
 
   const regenerate = useCallback(() => {
     if (!qrRef.current) return false;
@@ -401,12 +490,9 @@ export function GeneratorNew() {
   );
 
   const isLightColor = (color: string) => {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 128;
+    const rgb = hexToRgb(color);
+    if (!rgb) return false;
+    return relativeLuminance(rgb) > 0.5;
   };
 
   return (
@@ -577,6 +663,91 @@ export function GeneratorNew() {
                 onChange={(e) => updateStyle({ background: e.target.value })}
               />
             </div>
+          </div>
+        </div>
+
+        {showContrastWarning && (
+          <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
+            ⚠️ <strong>Низкий контраст:</strong> текущее соотношение {contrastRatio.toFixed(2)}:1.
+            {" "}Подберите более контрастные цвета для лучшей сканируемости QR-кода.
+          </div>
+        )}
+
+        <div className={styles.divider}></div>
+
+        <div className={styles.inputGroup}>
+          <label className={styles.inputLabel}>
+            <span>🪪 Логотип в центре</span>
+            <span className={styles.badge}>
+              {draft.style.logoDataUrl
+                ? `Макс ${maxLogoSize}% при ${draft.style.errorCorrection}`
+                : "Рекомендуем Q или H"}
+            </span>
+          </label>
+
+          <div className={styles.logoControls}>
+            <div className={styles.logoButtons}>
+              <label className={styles.logoUploadButton}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  className={styles.logoUploadInput}
+                  onChange={(event) => handleFileUpload(event.target.files?.[0] ?? null)}
+                />
+                {draft.style.logoDataUrl ? "Заменить логотип" : "Загрузить логотип"}
+              </label>
+              {draft.style.logoDataUrl && (
+                <button
+                  type="button"
+                  className={styles.logoRemoveButton}
+                  onClick={() => handleFileUpload(null)}
+                >
+                  Удалить
+                </button>
+              )}
+            </div>
+
+            {draft.style.logoDataUrl && (
+              <>
+                <div className={styles.logoPreview}>
+                  <img src={draft.style.logoDataUrl} alt="Предпросмотр логотипа" />
+                  <div className={styles.logoHint}>Логотип будет размещён по центру QR-кода.</div>
+                </div>
+
+                <div className={styles.rangeGroup}>
+                  <label className={styles.inputLabel}>
+                    <span>Размер логотипа</span>
+                    <span className={styles.rangeValue}>
+                      {Math.min(draft.style.logoSize, maxLogoSize)}%
+                    </span>
+                  </label>
+                  <input
+                    type="range"
+                    className={styles.rangeInput}
+                    min={10}
+                    max={maxLogoSize}
+                    value={Math.min(draft.style.logoSize, maxLogoSize)}
+                    onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
+                  />
+                </div>
+
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={draft.style.hideBackgroundDots}
+                    onChange={(event) => updateStyle({ hideBackgroundDots: event.target.checked })}
+                  />
+                  <span>Скрыть точки под логотипом</span>
+                </label>
+
+                {logoSizeExceedsLimit && (
+                  <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
+                    ⚠️ Логотип автоматически уменьшен до {maxLogoSize}% из-за текущего уровня коррекции ошибок.
+                    Увеличьте коррекцию для более крупного изображения.
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
