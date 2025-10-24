@@ -386,13 +386,18 @@
 
 .preview__canvas {
   cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
 }
 
 .preview__canvas canvas,
 .preview__canvas svg {
-  width: 100% !important;
+  display: block;
+  max-width: 100%;
   height: auto !important;
-  max-width: 300px;
+  border-radius: 8px;
   pointer-events: none;
   user-select: none;
 }
