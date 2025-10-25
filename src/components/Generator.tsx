@@ -5,6 +5,7 @@ import classNames from "classnames";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
 import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
+import { QR_SYSTEM, calculateMarginPx } from "@/lib/qrConstants";
 
 // Haptic feedback helper
 function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
@@ -46,11 +47,13 @@ interface Gradient {
 }
 
 interface StyleOptions {
-  size: number;
+  /** Размер для ЭКСПОРТА (256-4096px) - НЕ влияет на preview */
+  exportSize: number;
+  /** Margin в процентах (0-20%) - автоматически масштабируется */
+  marginPercent: number;
   errorCorrection: ErrorCorrection;
   foreground: string;
   background: string;
-  margin: number;
   dotStyle: DotStyle;
   eyeOuter: EyeStyle;
   eyeInner: EyeDotStyle;
@@ -75,11 +78,11 @@ interface GeneratorDraft {
 }
 
 const defaultStyle: StyleOptions = {
-  size: 320,
+  exportSize: QR_SYSTEM.EXPORT.DEFAULT_SIZE,
+  marginPercent: QR_SYSTEM.MARGIN.DEFAULT,
   errorCorrection: "H",
   foreground: "#0b1220",
   background: "#ffffff",
-  margin: 12,
   dotStyle: "rounded",
   eyeOuter: "square",
   eyeInner: "square",
@@ -122,7 +125,7 @@ function fieldKey(type: QRType, field: string) {
 }
 
 export function Generator() {
-  const { value: draft, setValue: setDraft, hydrated } = useDraft<GeneratorDraft>(
+  const { value: rawDraft, setValue: setDraft, hydrated } = useDraft<GeneratorDraft>(
     "generator",
     {
       type: "url",
@@ -130,6 +133,34 @@ export function Generator() {
       style: defaultStyle
     }
   );
+
+  // Миграция старых черновиков: size → exportSize, margin → marginPercent
+  const draft = useMemo(() => {
+    const style = { ...rawDraft.style };
+
+    // Если нет exportSize, но есть старый size - мигрируем
+    if (!style.exportSize && (style as any).size) {
+      style.exportSize = (style as any).size;
+      delete (style as any).size;
+    }
+
+    // Если нет marginPercent, но есть старый margin - конвертируем в проценты
+    if (style.marginPercent === undefined && (style as any).margin !== undefined) {
+      const oldMargin = (style as any).margin;
+      style.marginPercent = Math.min(QR_SYSTEM.MARGIN.MAX, Math.max(QR_SYSTEM.MARGIN.MIN, oldMargin * 2));
+      delete (style as any).margin;
+    }
+
+    // Устанавливаем дефолтные значения если их нет
+    if (!style.exportSize) {
+      style.exportSize = QR_SYSTEM.EXPORT.DEFAULT_SIZE;
+    }
+    if (style.marginPercent === undefined) {
+      style.marginPercent = QR_SYSTEM.MARGIN.DEFAULT;
+    }
+
+    return { ...rawDraft, style };
+  }, [rawDraft]);
 
   const [qrPayload, setQrPayload] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -185,21 +216,25 @@ export function Generator() {
     if (!QRCodeStylingCtor) return;
 
     if (!qrRef.current) {
+      // Preview всегда использует фиксированный размер 512px
+      const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
+
       const instance = new QRCodeStylingCtor({
-        width: defaultStyle.size,
-        height: defaultStyle.size,
+        width: previewSize,
+        height: previewSize,
         data: "https://example.com",
         image: undefined,
         qrOptions: {
           errorCorrectionLevel: defaultStyle.errorCorrection,
-          margin: defaultStyle.margin,
+          margin: previewMargin,
           mode: "Byte"
         }
       });
       qrRef.current = instance;
       instance.append(containerRef.current);
     }
-  }, [QRCodeStylingCtor]);
+  }, [QRCodeStylingCtor, draft.style.marginPercent]);
 
   const formValues = useMemo(() => {
     const scoped: Record<string, string> = {};
@@ -254,16 +289,20 @@ export function Generator() {
     triggerHaptic('medium');
     setQrPayload(payload);
 
+    // Preview всегда использует фиксированный размер
+    const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+    const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
+
     // Определяем форму фона на основе формы QR кода
     const options: any = {
       data: bytesToBinaryString(encodedBytes),
-      width: draft.style.size,
-      height: draft.style.size,
+      width: previewSize,
+      height: previewSize,
       image: draft.style.logoDataUrl,
       shape: draft.style.shape,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
-        margin: draft.style.margin,
+        margin: previewMargin,
         mode: "Byte"
       },
       dotsOptions: {
@@ -335,9 +374,62 @@ export function Generator() {
       const ok = regenerate();
       if (!ok) return;
       triggerHaptic('heavy');
+
       const payload = qrPayload || activeDefinition.buildPayload(formValues);
-      const blob = await qrRef.current.getRawData(format);
+      const encoder = new TextEncoder();
+      const encodedBytes = encoder.encode(payload);
+
+      // Для экспорта используем размер из настроек
+      const exportSize = draft.style.exportSize;
+      const exportMargin = calculateMarginPx(exportSize, draft.style.marginPercent);
+
+      // Создаем временный экземпляр с размером для экспорта
+      const exportOptions: any = {
+        data: bytesToBinaryString(encodedBytes),
+        width: exportSize,
+        height: exportSize,
+        image: draft.style.logoDataUrl,
+        shape: draft.style.shape,
+        qrOptions: {
+          errorCorrectionLevel: draft.style.errorCorrection,
+          margin: exportMargin,
+          mode: "Byte"
+        },
+        dotsOptions: {
+          ...(draft.style.useDotsGradient && draft.style.dotsGradient
+            ? { gradient: draft.style.dotsGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.dotStyle
+        },
+        backgroundOptions: {
+          ...(draft.style.useBackgroundGradient && draft.style.backgroundGradient
+            ? { gradient: draft.style.backgroundGradient }
+            : { color: draft.style.background })
+        },
+        cornersSquareOptions: {
+          ...(draft.style.useCornersGradient && draft.style.cornersGradient
+            ? { gradient: draft.style.cornersGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.eyeOuter
+        },
+        cornersDotOptions: {
+          ...(draft.style.useCornersGradient && draft.style.cornersGradient
+            ? { gradient: draft.style.cornersGradient }
+            : { color: draft.style.foreground }),
+          type: draft.style.eyeInner
+        },
+        imageOptions: {
+          imageSize: draft.style.logoSize / 100,
+          margin: 4,
+          hideBackgroundDots: draft.style.hideBackgroundDots
+        }
+      };
+
+      // Создаем временный экземпляр для экспорта
+      const exportQR = new QRCodeStylingCtor(exportOptions);
+      const blob = await exportQR.getRawData(format);
       if (!blob) return;
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       const slug = payload.slice(0, 32).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "qr";
@@ -348,7 +440,7 @@ export function Generator() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
-    [regenerate, qrPayload, activeDefinition, formValues]
+    [regenerate, qrPayload, activeDefinition, formValues, draft.style, QRCodeStylingCtor]
   );
 
   return (
