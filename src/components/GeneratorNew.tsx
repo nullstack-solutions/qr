@@ -304,6 +304,12 @@ const SHAPE_OPTIONS: { value: ShapeType; label: string }[] = [
   { value: "circle", label: "Круг" }
 ];
 
+const MIN_QR_SIZE = 256;
+const MAX_QR_SIZE = 2048;
+const QR_SIZE_STEP = 64;
+const MIN_MARGIN = 0;
+const MAX_MARGIN = 10;
+
 export function GeneratorNew() {
   const { value: draft, setValue: setDraft, hydrated } = useDraft<GeneratorDraft>(
     "generator",
@@ -327,6 +333,9 @@ export function GeneratorNew() {
     const container = containerRef.current;
     if (!container) return;
 
+    const containerWidth = container.clientWidth || container.offsetWidth;
+    const containerHeight = container.clientHeight || container.offsetHeight || containerWidth;
+
     container.style.width = "100%";
     container.style.height = "100%";
     container.style.maxWidth = "100%";
@@ -341,29 +350,50 @@ export function GeneratorNew() {
       firstChild.style.height = "100%";
       firstChild.style.maxWidth = "100%";
       firstChild.style.maxHeight = "100%";
+      firstChild.style.display = "flex";
+      firstChild.style.alignItems = "center";
+      firstChild.style.justifyContent = "center";
     }
 
-    const svg = container.querySelector("svg") as SVGElement | null;
-    if (svg) {
-      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      svg.setAttribute("width", "100%");
-      svg.setAttribute("height", "100%");
-      const element = svg as unknown as HTMLElement;
+    const applyScale = (element: HTMLElement, intrinsicWidth: number, intrinsicHeight: number) => {
       element.style.width = "100%";
       element.style.height = "100%";
       element.style.maxWidth = "100%";
       element.style.maxHeight = "100%";
+      element.style.aspectRatio = "1 / 1";
+      element.style.transformOrigin = "center";
+
+      if (!containerWidth || !containerHeight || !intrinsicWidth || !intrinsicHeight) {
+        element.style.removeProperty("transform");
+        return;
+      }
+
+      const scale = Math.min(containerWidth / intrinsicWidth, containerHeight / intrinsicHeight);
+      if (Number.isFinite(scale) && scale > 0 && scale < 1) {
+        element.style.transform = `scale(${scale})`;
+      } else {
+        element.style.removeProperty("transform");
+      }
+    };
+
+    const svg = container.querySelector("svg") as SVGElement | null;
+    if (svg) {
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      const viewBox = svg.viewBox?.baseVal;
+      const widthAttr = Number(svg.getAttribute("width"));
+      const heightAttr = Number(svg.getAttribute("height"));
+      const intrinsicWidth = viewBox?.width || widthAttr || draft.style.size;
+      const intrinsicHeight = viewBox?.height || heightAttr || draft.style.size;
+      applyScale(svg as unknown as HTMLElement, intrinsicWidth, intrinsicHeight);
     }
 
     const canvas = container.querySelector("canvas") as HTMLCanvasElement | null;
     if (canvas) {
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.maxWidth = "100%";
-      canvas.style.maxHeight = "100%";
-      canvas.style.aspectRatio = "1 / 1";
+      const intrinsicWidth = canvas.width || draft.style.size;
+      const intrinsicHeight = canvas.height || draft.style.size;
+      applyScale(canvas, intrinsicWidth, intrinsicHeight);
     }
-  }, []);
+  }, [draft.style.size]);
 
   const schedulePreviewFit = useCallback(() => {
     if (typeof window === "undefined") {
@@ -383,6 +413,29 @@ export function GeneratorNew() {
       setDraft((prev) => ({ ...prev, style: { ...prev.style, ...update } }));
     },
     [setDraft]
+  );
+
+  const clampMargin = useCallback((value: number) => {
+    if (Number.isNaN(value)) return MIN_MARGIN;
+    return Math.min(MAX_MARGIN, Math.max(MIN_MARGIN, Math.round(value)));
+  }, []);
+
+  const handleMarginChange = useCallback(
+    (value: number) => {
+      const next = clampMargin(value);
+      updateStyle({ margin: next });
+      schedulePreviewFit();
+    },
+    [clampMargin, schedulePreviewFit, updateStyle]
+  );
+
+  const handleSizeChange = useCallback(
+    (value: number) => {
+      const next = Math.min(MAX_QR_SIZE, Math.max(MIN_QR_SIZE, Math.round(value / QR_SIZE_STEP) * QR_SIZE_STEP));
+      updateStyle({ size: next });
+      schedulePreviewFit();
+    },
+    [schedulePreviewFit, updateStyle]
   );
 
   const updateGradient = (key: GradientKey, updater: (current: Gradient) => Gradient) => {
@@ -663,6 +716,10 @@ export function GeneratorNew() {
     if (!qrRef.current) return;
     regenerate();
   }, [regenerate, hydrated]);
+
+  useEffect(() => {
+    schedulePreviewFit();
+  }, [draft.style.margin, draft.style.size, schedulePreviewFit]);
 
   const exportBlob = useCallback(
     async (format: "png" | "svg") => {
@@ -1426,11 +1483,11 @@ export function GeneratorNew() {
           <input
             type="range"
             className={styles.rangeInput}
-            min={256}
-            max={2048}
-            step={64}
+            min={MIN_QR_SIZE}
+            max={MAX_QR_SIZE}
+            step={QR_SIZE_STEP}
             value={draft.style.size}
-            onChange={(e) => updateStyle({ size: Number(e.target.value) })}
+            onChange={(e) => handleSizeChange(Number(e.target.value))}
           />
         </div>
 
@@ -1467,11 +1524,38 @@ export function GeneratorNew() {
           <input
             type="range"
             className={styles.rangeInput}
-            min={0}
-            max={10}
+            min={MIN_MARGIN}
+            max={MAX_MARGIN}
+            step={1}
             value={draft.style.margin}
-            onChange={(e) => updateStyle({ margin: Number(e.target.value) })}
+            onChange={(e) => handleMarginChange(Number(e.target.value))}
           />
+          <div className={styles.rangeControls}>
+            <button
+              type="button"
+              className={styles.rangeStepper}
+              onClick={() => handleMarginChange(draft.style.margin - 1)}
+              aria-label="Уменьшить отступ"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              className={styles.rangeNumber}
+              min={MIN_MARGIN}
+              max={MAX_MARGIN}
+              value={draft.style.margin}
+              onChange={(event) => handleMarginChange(Number(event.target.value))}
+            />
+            <button
+              type="button"
+              className={styles.rangeStepper}
+              onClick={() => handleMarginChange(draft.style.margin + 1)}
+              aria-label="Увеличить отступ"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <div className={styles.divider}></div>

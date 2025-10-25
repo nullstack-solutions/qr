@@ -574,6 +574,55 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
+.rangeControls {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rangeStepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(102, 126, 234, 0.12);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.rangeStepper:hover {
+  background: rgba(102, 126, 234, 0.22);
+}
+
+.rangeStepper:active {
+  transform: scale(0.95);
+}
+
+.rangeNumber {
+  width: 72px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.rangeNumber:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.18);
+}
+
 .rangeHint {
   margin-top: 8px;
   font-size: 12px;
