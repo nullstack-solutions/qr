@@ -370,45 +370,6 @@
   color: var(--tg-accent, #2864ff);
 }
 
-/* TMA Premium Design System - Preview */
-
-.preview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  align-items: center;
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(51, 144, 236, 0.2);
-  background: var(--bg);
-  box-shadow: var(--shadow-sm);
-}
-
-.preview__canvas {
-  cursor: default;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-}
-
-.preview__canvas canvas,
-.preview__canvas svg {
-  display: block;
-  max-width: 100%;
-  height: auto !important;
-  border-radius: 8px;
-  pointer-events: none;
-  user-select: none;
-}
-
-.preview__actions {
-  display: flex;
-  gap: var(--spacing-sm);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 /* TMA Premium Design System - Buttons */
 
 .primary,
