@@ -67,6 +67,101 @@ type ShapeType = "square" | "circle";
 type GradientType = "linear" | "radial";
 type GradientKey = "dotsGradient" | "backgroundGradient" | "cornersGradient";
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function clampSpacing(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 0.6) return 0.6;
+  return value;
+}
+
+function applyDotSpacing(svg: SVGElement, spacing: number) {
+  const safeSpacing = clampSpacing(spacing);
+  if (safeSpacing <= 0) {
+    return;
+  }
+
+  const scale = 1 - safeSpacing;
+  const rects = svg.querySelectorAll("rect");
+
+  rects.forEach((rect) => {
+    const width = Number(rect.getAttribute("width"));
+    const height = Number(rect.getAttribute("height"));
+    if (!width || !height) return;
+    if (width > 40 || height > 40) return;
+
+    const x = Number(rect.getAttribute("x"));
+    const y = Number(rect.getAttribute("y"));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    const newWidth = width * scale;
+    const newHeight = height * scale;
+    const newX = centerX - newWidth / 2;
+    const newY = centerY - newHeight / 2;
+
+    rect.setAttribute("x", newX.toFixed(3));
+    rect.setAttribute("y", newY.toFixed(3));
+    rect.setAttribute("width", newWidth.toFixed(3));
+    rect.setAttribute("height", newHeight.toFixed(3));
+  });
+}
+
+function ensureCircleLogo(svg: SVGElement, options: any) {
+  const image = svg.querySelector("image");
+  if (!image) {
+    return;
+  }
+
+  if (options.shape !== "circle") {
+    image.removeAttribute("clip-path");
+    return;
+  }
+
+  const width = Number(svg.getAttribute("width")) || Number(options.width) || defaultStyle.size;
+  const height = Number(svg.getAttribute("height")) || Number(options.height) || defaultStyle.size;
+  const margin = Number(options.margin ?? 0);
+  const radius = Math.max(0, Math.min(width, height) / 2 - margin);
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  let defs = svg.querySelector("defs");
+  if (!defs) {
+    defs = svg.ownerDocument.createElementNS(SVG_NS, "defs");
+    svg.insertBefore(defs, svg.firstChild);
+  }
+
+  const clipId = "qr-logo-circle-mask";
+  let clipPath = defs.querySelector(`#${clipId}`) as SVGClipPathElement | null;
+  if (!clipPath) {
+    clipPath = svg.ownerDocument.createElementNS(SVG_NS, "clipPath");
+    clipPath.setAttribute("id", clipId);
+    defs.appendChild(clipPath);
+  }
+
+  let circle = clipPath.querySelector("circle") as SVGCircleElement | null;
+  if (!circle) {
+    circle = svg.ownerDocument.createElementNS(SVG_NS, "circle");
+    clipPath.appendChild(circle);
+  }
+
+  circle.setAttribute("cx", centerX.toFixed(3));
+  circle.setAttribute("cy", centerY.toFixed(3));
+  circle.setAttribute("r", Math.max(radius, 0).toFixed(3));
+
+  image.setAttribute("clip-path", `url(#${clipId})`);
+}
+
+function spacingExtension(svg: SVGElement, options: any) {
+  const spacing = clampSpacing(Number(options.moduleSpacing ?? 0));
+  if (spacing > 0) {
+    applyDotSpacing(svg, spacing);
+  }
+  ensureCircleLogo(svg, options);
+}
+
 interface ColorStop {
   offset: number;
   color: string;
@@ -90,6 +185,7 @@ interface StyleOptions {
   logoDataUrl?: string;
   logoSize: number;
   shape: ShapeType;
+  dotSpacing: number;
   useDotsGradient: boolean;
   dotsGradient?: Gradient;
   useBackgroundGradient: boolean;
@@ -116,6 +212,7 @@ const defaultStyle: StyleOptions = {
   eyeInner: "square",
   logoSize: 18,
   shape: "square",
+  dotSpacing: 0,
   useDotsGradient: false,
   dotsGradient: {
     type: "linear",
@@ -306,6 +403,12 @@ export function GeneratorNew() {
   );
 
   useEffect(() => {
+    if (draft.style.dotSpacing === undefined) {
+      updateStyle({ dotSpacing: defaultStyle.dotSpacing });
+    }
+  }, [draft.style.dotSpacing, updateStyle]);
+
+  useEffect(() => {
     if (draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize) {
       updateStyle({ logoSize: maxLogoSize });
     }
@@ -344,6 +447,7 @@ export function GeneratorNew() {
 
     if (!qrRef.current) {
       const instance = new QRCodeStylingCtor({
+        type: "svg",
         width: defaultStyle.size,
         height: defaultStyle.size,
         data: "https://t.me/durov",
@@ -352,10 +456,17 @@ export function GeneratorNew() {
         qrOptions: {
           errorCorrectionLevel: defaultStyle.errorCorrection,
           mode: "Byte"
+        },
+        imageOptions: {
+          hideBackgroundDots: defaultStyle.hideBackgroundDots,
+          imageSize: defaultStyle.logoSize / 100,
+          margin: 4,
+          saveAsBlob: true
         }
       });
       qrRef.current = instance;
       instance.append(containerRef.current);
+      instance.applyExtension(spacingExtension);
     }
   }, [QRCodeStylingCtor]);
 
@@ -431,12 +542,14 @@ export function GeneratorNew() {
     setQrPayload(payload);
 
     const options: any = {
+      type: "svg",
       data: bytesToBinaryString(encodedBytes),
       width: draft.style.size,
       height: draft.style.size,
       image: draft.style.logoDataUrl,
       shape: draft.style.shape,
       margin: draft.style.margin,
+      moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
         mode: "Byte"
@@ -467,7 +580,8 @@ export function GeneratorNew() {
       imageOptions: {
         imageSize: draft.style.logoSize / 100,
         margin: 4,
-        hideBackgroundDots: draft.style.hideBackgroundDots
+        hideBackgroundDots: draft.style.hideBackgroundDots,
+        saveAsBlob: true
       }
     };
 
@@ -811,6 +925,26 @@ export function GeneratorNew() {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className={styles.rangeGroup}>
+            <label className={styles.inputLabel}>
+              <span>↔️ Расстояние между точками</span>
+              <span className={styles.rangeValue}>{draft.style.dotSpacing}%</span>
+            </label>
+            <input
+              type="range"
+              className={styles.rangeInput}
+              min={0}
+              max={60}
+              step={5}
+              value={draft.style.dotSpacing ?? 0}
+              onChange={(event) => {
+                updateStyle({ dotSpacing: Number(event.target.value) });
+                triggerHaptic('light');
+              }}
+            />
+            <div className={styles.rangeHint}>0% — плотная сетка, 60% — заметные промежутки.</div>
           </div>
         </div>
 
@@ -1256,12 +1390,15 @@ export function GeneratorNew() {
             <option value="Q">Q — до 25%</option>
             <option value="H">H — до 30%</option>
           </select>
+          <div className={styles.rangeHint}>
+            Проценты показывают, какую часть QR-кода можно закрыть или испортить, чтобы он всё равно считывался.
+          </div>
         </div>
 
         <div className={styles.rangeGroup}>
           <label className={styles.inputLabel}>
             <span>🖼️ Отступ</span>
-            <span className={styles.rangeValue}>{draft.style.margin}</span>
+            <span className={styles.rangeValue}>{draft.style.margin}px</span>
           </label>
           <input
             type="range"

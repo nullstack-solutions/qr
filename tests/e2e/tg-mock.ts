@@ -28,52 +28,18 @@ export const tgMock = (overrides: Partial<any> = {}) => ({
     headerColor: '#ffffff',
     backgroundColor: '#ffffff',
     isClosingConfirmationEnabled: false,
-    ready: () => {},
-    expand: () => {},
-    close: () => {},
-    enableClosingConfirmation: () => {},
-    disableClosingConfirmation: () => {},
-    HapticFeedback: {
-      impactOccurred: (style: string) => {},
-      notificationOccurred: (type: string) => {},
-      selectionChanged: () => {}
-    },
+    HapticFeedback: {},
     MainButton: {
       isVisible: false,
       isActive: true,
       text: '',
       color: '#3390ec',
       textColor: '#ffffff',
-      isProgressVisible: false,
-      show: () => {},
-      hide: () => {},
-      setText: (text: string) => {},
-      enable: () => {},
-      disable: () => {},
-      showProgress: () => {},
-      hideProgress: () => {},
-      setParams: (params: any) => {},
-      onClick: (callback: Function) => {},
-      offClick: (callback: Function) => {}
+      isProgressVisible: false
     },
     BackButton: {
-      isVisible: false,
-      show: () => {},
-      hide: () => {},
-      onClick: (callback: Function) => {},
-      offClick: (callback: Function) => {}
-    },
-    onEvent: (eventType: string, callback: Function) => {},
-    offEvent: (eventType: string, callback: Function) => {},
-    sendData: (data: string) => {},
-    openLink: (url: string) => {},
-    openTelegramLink: (url: string) => {},
-    showPopup: (params: any, callback?: Function) => {},
-    showAlert: (message: string, callback?: Function) => {},
-    showConfirm: (message: string, callback?: Function) => {},
-    showScanQrPopup: (params: any, callback?: Function) => {},
-    closeScanQrPopup: () => {},
-    readTextFromClipboard: (callback?: Function) => {}
+      isVisible: false
+    }
   },
   ...overrides
 });

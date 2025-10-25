@@ -562,6 +562,12 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
+.rangeHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--hint);
+}
+
 .divider {
   height: 1px;
   background: rgba(255,255,255,0.1);
