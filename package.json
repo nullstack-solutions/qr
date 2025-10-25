@@ -9,8 +9,10 @@
     "serve": "serve out -l 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "typecheck:e2e": "tsc -p tests/e2e/tsconfig.json",
+    "pretest:e2e": "node scripts/pretest-e2e.mjs",
     "test": "npm run typecheck && node --test tests/*.test.mjs",
-    "test:e2e": "playwright test --reporter=line",
+    "test:e2e": "node scripts/run-e2e.mjs",
     "test:e2e:report": "playwright show-report",
     "test:all": "npm run test && npm run test:e2e"
   },
