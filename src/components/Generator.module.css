@@ -68,18 +68,30 @@
   width: var(--qr-output-size);
   max-width: 100%;
   max-height: var(--qr-max-height);
+  aspect-ratio: 1 / 1;
   pointer-events: none;
   user-select: none;
   background: transparent;
+  overflow: hidden;
 }
 
-.qrCode :global(canvas),
-.qrCode :global(svg) {
+.qrCanvas {
   width: 100% !important;
-  height: auto !important;
+  height: 100% !important;
   max-width: 100% !important;
-  max-height: var(--qr-max-height) !important;
-  object-fit: contain;
+  max-height: 100% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+.qrCanvas :global(canvas),
+.qrCanvas :global(svg) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
 }
 
 .tabs {
