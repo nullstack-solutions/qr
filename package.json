@@ -10,6 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "typecheck:e2e": "tsc -p tests/e2e/tsconfig.json",
+    "pretest:e2e": "playwright install",
     "test": "npm run typecheck && node --test tests/*.test.mjs",
     "test:e2e": "npm run typecheck:e2e && playwright test --reporter=line",
     "test:e2e:report": "playwright show-report",
