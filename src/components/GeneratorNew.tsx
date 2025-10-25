@@ -379,11 +379,22 @@ export function GeneratorNew() {
     const svg = container.querySelector("svg") as SVGElement | null;
     if (svg) {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      const viewBox = svg.viewBox?.baseVal;
+
+      let intrinsicWidth = draft.style.size;
+      let intrinsicHeight = draft.style.size;
+
       const widthAttr = Number(svg.getAttribute("width"));
       const heightAttr = Number(svg.getAttribute("height"));
-      const intrinsicWidth = viewBox?.width || widthAttr || draft.style.size;
-      const intrinsicHeight = viewBox?.height || heightAttr || draft.style.size;
+
+      if (svg instanceof SVGSVGElement) {
+        const viewBox = svg.viewBox?.baseVal;
+        intrinsicWidth = viewBox?.width || widthAttr || intrinsicWidth;
+        intrinsicHeight = viewBox?.height || heightAttr || intrinsicHeight;
+      } else {
+        intrinsicWidth = widthAttr || intrinsicWidth;
+        intrinsicHeight = heightAttr || intrinsicHeight;
+      }
+
       applyScale(svg as unknown as HTMLElement, intrinsicWidth, intrinsicHeight);
     }
 
