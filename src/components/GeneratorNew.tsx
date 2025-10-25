@@ -321,7 +321,60 @@ export function GeneratorNew() {
   const [QRCodeStylingCtor, setQRCodeStylingCtor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const qrRef = useRef<any>();
+  const qrRef = useRef<any>(null);
+
+  const ensurePreviewFits = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.style.width = "100%";
+    container.style.height = "100%";
+    container.style.maxWidth = "100%";
+    container.style.maxHeight = "100%";
+    container.style.display = "flex";
+    container.style.alignItems = "center";
+    container.style.justifyContent = "center";
+
+    const firstChild = container.firstElementChild as HTMLElement | null;
+    if (firstChild) {
+      firstChild.style.width = "100%";
+      firstChild.style.height = "100%";
+      firstChild.style.maxWidth = "100%";
+      firstChild.style.maxHeight = "100%";
+    }
+
+    const svg = container.querySelector("svg") as SVGElement | null;
+    if (svg) {
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
+      const element = svg as unknown as HTMLElement;
+      element.style.width = "100%";
+      element.style.height = "100%";
+      element.style.maxWidth = "100%";
+      element.style.maxHeight = "100%";
+    }
+
+    const canvas = container.querySelector("canvas") as HTMLCanvasElement | null;
+    if (canvas) {
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
+      canvas.style.aspectRatio = "1 / 1";
+    }
+  }, []);
+
+  const schedulePreviewFit = useCallback(() => {
+    if (typeof window === "undefined") {
+      ensurePreviewFits();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      ensurePreviewFits();
+    });
+  }, [ensurePreviewFits]);
 
   const activeDefinition = useMemo(() => getTypeDefinition(draft.type), [draft.type]);
 
@@ -448,18 +501,18 @@ export function GeneratorNew() {
     if (!qrRef.current) {
       const instance = new QRCodeStylingCtor({
         type: "svg",
-        width: defaultStyle.size,
-        height: defaultStyle.size,
+        width: draft.style.size,
+        height: draft.style.size,
         data: "https://t.me/durov",
         image: undefined,
-        margin: defaultStyle.margin,
+        margin: draft.style.margin,
         qrOptions: {
-          errorCorrectionLevel: defaultStyle.errorCorrection,
+          errorCorrectionLevel: draft.style.errorCorrection,
           mode: "Byte"
         },
         imageOptions: {
-          hideBackgroundDots: defaultStyle.hideBackgroundDots,
-          imageSize: defaultStyle.logoSize / 100,
+          hideBackgroundDots: draft.style.hideBackgroundDots,
+          imageSize: draft.style.logoSize / 100,
           margin: 4,
           saveAsBlob: true
         }
@@ -467,8 +520,9 @@ export function GeneratorNew() {
       qrRef.current = instance;
       instance.append(containerRef.current);
       instance.applyExtension(spacingExtension);
+      schedulePreviewFit();
     }
-  }, [QRCodeStylingCtor]);
+  }, [QRCodeStylingCtor, draft.style.errorCorrection, draft.style.hideBackgroundDots, draft.style.logoSize, draft.style.margin, draft.style.size, schedulePreviewFit]);
 
   const formValues = useMemo(() => {
     const scoped: Record<string, string> = {};
@@ -585,9 +639,19 @@ export function GeneratorNew() {
       }
     };
 
-    qrRef.current?.update(options);
+    const finalizePreview = () => {
+      qrRef.current?.applyExtension(spacingExtension);
+      schedulePreviewFit();
+    };
+
+    const updateResult = qrRef.current?.update(options);
+    if (updateResult && typeof (updateResult as Promise<unknown>).then === "function") {
+      (updateResult as Promise<unknown>).finally(finalizePreview);
+    } else {
+      finalizePreview();
+    }
     return true;
-  }, [activeDefinition, formValues, draft.style]);
+  }, [activeDefinition, formValues, draft.style, schedulePreviewFit]);
 
   useEffect(() => {
     if (!qrRef.current) return;
@@ -675,7 +739,7 @@ export function GeneratorNew() {
     <section className={styles.generator}>
       <div className={styles.qrPreview}>
         <div className={styles.qrCode}>
-          <div ref={containerRef} />
+          <div ref={containerRef} className={styles.qrCanvas} />
         </div>
       </div>
 
