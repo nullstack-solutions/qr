@@ -25,8 +25,7 @@
       ]
     },
     "types": [
-      "@types/node",
-      "@playwright/test"
+      "@types/node"
     ],
     "plugins": [
       {
