@@ -333,8 +333,9 @@ export function GeneratorNew() {
     const container = containerRef.current;
     if (!container) return;
 
-    const containerWidth = container.clientWidth || container.offsetWidth;
-    const containerHeight = container.clientHeight || container.offsetHeight || containerWidth;
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width || container.clientWidth || container.offsetWidth;
+    const containerHeight = rect.height || container.clientHeight || container.offsetHeight || containerWidth;
 
     container.style.width = "100%";
     container.style.height = "100%";
@@ -343,6 +344,7 @@ export function GeneratorNew() {
     container.style.display = "flex";
     container.style.alignItems = "center";
     container.style.justifyContent = "center";
+    container.style.overflow = "hidden";
 
     const firstChild = container.firstElementChild as HTMLElement | null;
     if (firstChild) {
@@ -353,27 +355,30 @@ export function GeneratorNew() {
       firstChild.style.display = "flex";
       firstChild.style.alignItems = "center";
       firstChild.style.justifyContent = "center";
+      firstChild.style.overflow = "hidden";
     }
 
     const applyScale = (element: HTMLElement, intrinsicWidth: number, intrinsicHeight: number) => {
-      element.style.width = "100%";
-      element.style.height = "100%";
-      element.style.maxWidth = "100%";
-      element.style.maxHeight = "100%";
-      element.style.aspectRatio = "1 / 1";
-      element.style.transformOrigin = "center";
-
-      if (!containerWidth || !containerHeight || !intrinsicWidth || !intrinsicHeight) {
+      if (!intrinsicWidth || !intrinsicHeight) {
+        element.style.removeProperty("width");
+        element.style.removeProperty("height");
         element.style.removeProperty("transform");
+        element.style.removeProperty("aspectRatio");
         return;
       }
 
-      const scale = Math.min(containerWidth / intrinsicWidth, containerHeight / intrinsicHeight);
-      if (Number.isFinite(scale) && scale > 0 && scale < 1) {
-        element.style.transform = `scale(${scale})`;
-      } else {
-        element.style.removeProperty("transform");
-      }
+      const availableWidth = Math.max(containerWidth || intrinsicWidth, 1);
+      const availableHeight = Math.max(containerHeight || intrinsicHeight, 1);
+      const scale = Math.min(1, availableWidth / intrinsicWidth, availableHeight / intrinsicHeight);
+      const scaledWidth = intrinsicWidth * scale;
+      const scaledHeight = intrinsicHeight * scale;
+
+      element.style.width = `${scaledWidth}px`;
+      element.style.height = `${scaledHeight}px`;
+      element.style.maxWidth = "100%";
+      element.style.maxHeight = "100%";
+      element.style.aspectRatio = `${intrinsicWidth} / ${intrinsicHeight}`;
+      element.style.transform = "translateZ(0)";
     };
 
     const svg = container.querySelector("svg") as SVGElement | null;
@@ -1540,6 +1545,7 @@ export function GeneratorNew() {
             step={1}
             value={draft.style.margin}
             onChange={(e) => handleMarginChange(Number(e.target.value))}
+            onInput={(e) => handleMarginChange(Number((e.target as HTMLInputElement).value))}
           />
           <div className={styles.rangeControls}>
             <button
