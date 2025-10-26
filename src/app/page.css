@@ -385,11 +385,6 @@
 }
 
 .preview__canvas {
-  padding: var(--spacing-md);
-  background: #ffffff;
-  border-radius: var(--radius-md);
-}
-
   width: 100%;
   max-width: 300px;
   display: flex;
@@ -402,8 +397,8 @@
 .preview__canvas svg {
   width: 100% !important;
   height: auto !important;
-  max-width: 300px;
-  display: block;
+  max-width: 100% !important;
+  object-fit: contain;
 }
 
 .preview__actions {
