@@ -121,8 +121,8 @@ function ensureCircleLogo(svg: SVGElement, options: any) {
     return;
   }
 
-  const width = Number(svg.getAttribute("width")) || Number(options.width) || defaultStyle.size;
-  const height = Number(svg.getAttribute("height")) || Number(options.height) || defaultStyle.size;
+  const width = Number(svg.getAttribute("width")) || Number(options.width) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+  const height = Number(svg.getAttribute("height")) || Number(options.height) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
   const margin = Number(options.margin ?? 0);
   const radius = Math.max(0, Math.min(width, height) / 2 - margin);
   const centerX = width / 2;
@@ -413,8 +413,8 @@ export function GeneratorNew() {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
       // Preview всегда использует фиксированный размер
-      let intrinsicWidth = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-      let intrinsicHeight = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      let intrinsicWidth: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      let intrinsicHeight: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
 
       const widthAttr = Number(svg.getAttribute("width"));
       const heightAttr = Number(svg.getAttribute("height"));
