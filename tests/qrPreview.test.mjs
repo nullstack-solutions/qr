@@ -28,6 +28,13 @@ test("preview__canvas has container styles for proper QR display", async () => {
     ".preview__canvas should have max-width: 300px"
   );
 
+  // Check that .preview__canvas maintains a square aspect ratio
+  assert.match(
+    css,
+    /\.preview__canvas\s*{[^}]*aspect-ratio:\s*1\s*\/\s*1/,
+    ".preview__canvas should have aspect-ratio: 1 / 1"
+  );
+
   // Check that .preview__canvas uses flexbox for centering
   assert.match(
     css,
@@ -79,6 +86,13 @@ test("preview__canvas child elements have responsive sizing", async () => {
     css,
     /\.preview__canvas\s*>\s*div[^}]*,\s*\.preview__canvas\s+canvas[^}]*,\s*\.preview__canvas\s+svg\s*{[^}]*object-fit:\s*contain/,
     ".preview__canvas > div, canvas, svg should have object-fit: contain"
+  );
+
+  // Check that display is set to block to avoid inline cropping issues
+  assert.match(
+    css,
+    /\.preview__canvas\s*>\s*div[^}]*,\s*\.preview__canvas\s+canvas[^}]*,\s*\.preview__canvas\s+svg\s*{[^}]*display:\s*block/,
+    ".preview__canvas > div, canvas, svg should have display: block"
   );
 });
 
