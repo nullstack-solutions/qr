@@ -57,7 +57,7 @@
   --qr-max-height: clamp(160px, calc(100vh - 220px), 360px);
   --qr-max-width: clamp(160px, calc(100vw - 96px), 360px);
   --qr-output-size: min(100%, var(--qr-max-width), var(--qr-max-height));
-  padding: 0;
+  padding: clamp(12px, 3%, 24px);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   position: relative;
@@ -71,8 +71,9 @@
   aspect-ratio: 1 / 1;
   pointer-events: none;
   user-select: none;
-  background: transparent;
+  background: white;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .qrCanvas {
@@ -92,6 +93,8 @@
   height: 100% !important;
   max-width: 100% !important;
   max-height: 100% !important;
+  object-fit: contain;
+  display: block;
 }
 
 .tabs {

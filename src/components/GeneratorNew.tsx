@@ -358,10 +358,6 @@ export function GeneratorNew() {
     const container = containerRef.current;
     if (!container) return;
 
-    const rect = container.getBoundingClientRect();
-    const containerWidth = rect.width || container.clientWidth || container.offsetWidth;
-    const containerHeight = rect.height || container.clientHeight || container.offsetHeight || containerWidth;
-
     container.style.width = "100%";
     container.style.height = "100%";
     container.style.maxWidth = "100%";
@@ -369,7 +365,7 @@ export function GeneratorNew() {
     container.style.display = "flex";
     container.style.alignItems = "center";
     container.style.justifyContent = "center";
-    container.style.overflow = "hidden";
+    container.style.overflow = "visible";
 
     const firstChild = container.firstElementChild as HTMLElement | null;
     if (firstChild) {
@@ -380,60 +376,27 @@ export function GeneratorNew() {
       firstChild.style.display = "flex";
       firstChild.style.alignItems = "center";
       firstChild.style.justifyContent = "center";
-      firstChild.style.overflow = "hidden";
+      firstChild.style.overflow = "visible";
     }
-
-    const applyScale = (element: HTMLElement, intrinsicWidth: number, intrinsicHeight: number) => {
-      if (!intrinsicWidth || !intrinsicHeight) {
-        element.style.removeProperty("width");
-        element.style.removeProperty("height");
-        element.style.removeProperty("transform");
-        element.style.removeProperty("aspectRatio");
-        return;
-      }
-
-      const availableWidth = Math.max(containerWidth || intrinsicWidth, 1);
-      const availableHeight = Math.max(containerHeight || intrinsicHeight, 1);
-      const scale = Math.min(1, availableWidth / intrinsicWidth, availableHeight / intrinsicHeight);
-      const scaledWidth = intrinsicWidth * scale;
-      const scaledHeight = intrinsicHeight * scale;
-
-      element.style.width = `${scaledWidth}px`;
-      element.style.height = `${scaledHeight}px`;
-      element.style.maxWidth = "100%";
-      element.style.maxHeight = "100%";
-      element.style.aspectRatio = `${intrinsicWidth} / ${intrinsicHeight}`;
-      element.style.transform = "translateZ(0)";
-    };
 
     const svg = container.querySelector("svg") as SVGElement | null;
     if (svg) {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-      // Preview всегда использует фиксированный размер
-      let intrinsicWidth: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-      let intrinsicHeight: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-
-      const widthAttr = Number(svg.getAttribute("width"));
-      const heightAttr = Number(svg.getAttribute("height"));
-
-      if (svg instanceof SVGSVGElement) {
-        const viewBox = svg.viewBox?.baseVal;
-        intrinsicWidth = viewBox?.width || widthAttr || intrinsicWidth;
-        intrinsicHeight = viewBox?.height || heightAttr || intrinsicHeight;
-      } else {
-        intrinsicWidth = widthAttr || intrinsicWidth;
-        intrinsicHeight = heightAttr || intrinsicHeight;
-      }
-
-      applyScale(svg as unknown as HTMLElement, intrinsicWidth, intrinsicHeight);
+      // Не устанавливаем фиксированные размеры - пусть SVG масштабируется естественно
+      svg.style.width = "100%";
+      svg.style.height = "100%";
+      svg.style.maxWidth = "100%";
+      svg.style.maxHeight = "100%";
+      svg.style.display = "block";
     }
 
     const canvas = container.querySelector("canvas") as HTMLCanvasElement | null;
     if (canvas) {
-      const intrinsicWidth = canvas.width || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-      const intrinsicHeight = canvas.height || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-      applyScale(canvas, intrinsicWidth, intrinsicHeight);
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.maxWidth = "100%";
+      canvas.style.maxHeight = "100%";
+      canvas.style.objectFit = "contain";
     }
   }, []); // Убрали зависимость от draft.style - preview всегда фиксированный
 
