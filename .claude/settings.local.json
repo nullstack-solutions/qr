@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(gh run list:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install)",
+      "Bash(npm i:*)",
+      "Bash(npm view:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git pull:*)",
+      "WebSearch",
+      "Bash(npm test:*)",
+      "Bash(npx next lint)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm audit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

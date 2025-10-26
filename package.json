@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "serve": "serve out -l 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck && node --test \"tests/**/*.test.mjs\""
+    "typecheck:e2e": "tsc -p tests/e2e/tsconfig.json",
+    "pretest:e2e": "node scripts/pretest-e2e.mjs",
+    "test": "npm run typecheck && node --test tests/*.test.mjs",
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:report": "playwright show-report",
+    "test:all": "npm run test && npm run test:e2e"
   },
   "dependencies": {
     "@twa-dev/sdk": "^8.0.2",
@@ -25,6 +31,7 @@
     "xlsx": "0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/node": "20.11.19",
     "@types/papaparse": "^5.3.16",
     "@types/qrcode": "^1.5.5",
@@ -32,7 +39,10 @@
     "@types/react-dom": "18.2.18",
     "eslint": "8.56.0",
     "eslint-config-next": "14.1.0",
+    "serve": "^14.2.4",
+    "ts-node": "^10.9.2",
     "typescript": "5.3.3",
-    "worker-loader": "3.0.8"
+    "worker-loader": "3.0.8",
+    "zod": "^3.23.8"
   }
 }

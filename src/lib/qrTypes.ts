@@ -20,6 +20,7 @@ export interface FieldSchema {
   type?: "text" | "textarea" | "number" | "email";
   helper?: string;
   pattern?: RegExp;
+  prefill?: string;
   validate?: (value: string, allValues: Record<string, string>) => string | null;
 }
 
