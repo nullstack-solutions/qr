@@ -90,12 +90,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.waitFor({ state: 'visible' });
     await urlInput.fill('https://example.com');
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
@@ -125,7 +125,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.fill('https://example.com/custom-colors');
 
     // Open style tab
@@ -133,7 +133,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await styleTab.click();
 
     // Change foreground color (dots color)
-    const colorSection = page.locator('text=🎨 Цвета').first();
+    const colorSection = page.locator('text=🎨 Цветовая схема').first();
     await expect(colorSection).toBeVisible();
 
     // Find color inputs and change them
@@ -142,7 +142,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await colorInputs.nth(1).fill('#F0F8FF'); // Background color
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
@@ -170,7 +170,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.fill('https://example.com/circle');
 
     // Open style tab
@@ -186,7 +186,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await shapeSelect.selectOption('circle');
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
@@ -214,22 +214,22 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.fill('https://example.com/gradient');
 
     // Open style tab
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    // Enable gradient for dots
-    const gradientCheckbox = page.locator('input[type="checkbox"]').filter({ has: page.locator('text=/Градиент.*QR/i') }).first();
+    // Enable gradient for dots - find the first gradient checkbox (for dots section)
+    const gradientCheckbox = page.locator('input[type="checkbox"]').first();
     await gradientCheckbox.check();
 
     // Wait for gradient controls to appear
     await page.waitForTimeout(500);
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
@@ -257,19 +257,21 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.fill('https://example.com/dot-style');
 
     // Open style tab
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    // Find dot style select
-    const dotStyleSelect = page.locator('select').filter({ hasText: /Скруглённый|Квадрат|Точки/ }).first();
-    await dotStyleSelect.selectOption('dots');
+    // Find dot style select - be more specific by finding the select with "Стиль точек" label
+    const dotStyleLabel = page.locator('text=Стиль точек');
+    await dotStyleLabel.waitFor({ state: 'visible' });
+    const dotStyleSelect = dotStyleLabel.locator('..').locator('select');
+    await dotStyleSelect.selectOption({ value: 'dots' });
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
@@ -297,11 +299,11 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
     await urlInput.fill('https://example.com/full-page');
 
     // Click generate button
-    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
     await generateBtn.click();
 
     // Wait for QR code to render
