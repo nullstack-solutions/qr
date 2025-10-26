@@ -79,10 +79,9 @@ function clampSpacing(value: number) {
 
 function applyDotSpacing(svg: SVGElement, spacing: number) {
   const safeSpacing = clampSpacing(spacing);
-  if (safeSpacing <= 0) {
-    return;
-  }
 
+  // Always apply spacing transformation, even when spacing = 0
+  // This ensures we override any default spacing from the library
   const scale = 1 - safeSpacing;
   const rects = svg.querySelectorAll("rect");
 
@@ -157,9 +156,8 @@ function ensureCircleLogo(svg: SVGElement, options: any) {
 
 function spacingExtension(svg: SVGElement, options: any) {
   const spacing = clampSpacing(Number(options.moduleSpacing ?? 0));
-  if (spacing > 0) {
-    applyDotSpacing(svg, spacing);
-  }
+  // Always apply spacing, even when it's 0, to override library defaults
+  applyDotSpacing(svg, spacing);
   ensureCircleLogo(svg, options);
 }
 
