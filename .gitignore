@@ -20,3 +20,4 @@ public/workers/*.js.map
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/screenshots/

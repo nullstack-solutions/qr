@@ -52,6 +52,14 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           TEST_INITDATA: ${{ secrets.TEST_INITDATA }}
 
+      - name: Upload QR Preview Screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qr-preview-screenshots
+          path: screenshots/
+          retention-days: 30
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
