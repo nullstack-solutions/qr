@@ -5,6 +5,7 @@ import classNames from "classnames";
 import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
 import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
+import { QR_SYSTEM, calculateMarginPx } from "@/lib/qrConstants";
 import styles from "./Generator.module.css";
 
 // Haptic feedback helper
@@ -120,8 +121,8 @@ function ensureCircleLogo(svg: SVGElement, options: any) {
     return;
   }
 
-  const width = Number(svg.getAttribute("width")) || Number(options.width) || defaultStyle.size;
-  const height = Number(svg.getAttribute("height")) || Number(options.height) || defaultStyle.size;
+  const width = Number(svg.getAttribute("width")) || Number(options.width) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+  const height = Number(svg.getAttribute("height")) || Number(options.height) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
   const margin = Number(options.margin ?? 0);
   const radius = Math.max(0, Math.min(width, height) / 2 - margin);
   const centerX = width / 2;
@@ -174,11 +175,13 @@ interface Gradient {
 }
 
 interface StyleOptions {
-  size: number;
+  /** Размер для ЭКСПОРТА (256-4096px) - НЕ влияет на preview */
+  exportSize: number;
+  /** Margin в процентах (0-20%) - автоматически масштабируется */
+  marginPercent: number;
   errorCorrection: ErrorCorrection;
   foreground: string;
   background: string;
-  margin: number;
   dotStyle: DotStyle;
   eyeOuter: EyeStyle;
   eyeInner: EyeDotStyle;
@@ -202,11 +205,11 @@ interface GeneratorDraft {
 }
 
 const defaultStyle: StyleOptions = {
-  size: 512,
+  exportSize: QR_SYSTEM.EXPORT.DEFAULT_SIZE,
+  marginPercent: QR_SYSTEM.MARGIN.DEFAULT,
   errorCorrection: "H",
   foreground: "#000000",
   background: "#ffffff",
-  margin: 4,
   dotStyle: "rounded",
   eyeOuter: "square",
   eyeInner: "square",
@@ -304,14 +307,10 @@ const SHAPE_OPTIONS: { value: ShapeType; label: string }[] = [
   { value: "circle", label: "Круг" }
 ];
 
-const MIN_QR_SIZE = 256;
-const MAX_QR_SIZE = 2048;
-const QR_SIZE_STEP = 64;
-const MIN_MARGIN = 0;
-const MAX_MARGIN = 10;
+// Константы перенесены в /src/lib/qrConstants.ts
 
 export function GeneratorNew() {
-  const { value: draft, setValue: setDraft, hydrated } = useDraft<GeneratorDraft>(
+  const { value: rawDraft, setValue: setDraft, hydrated } = useDraft<GeneratorDraft>(
     "generator",
     {
       type: "url",
@@ -319,6 +318,34 @@ export function GeneratorNew() {
       style: defaultStyle
     }
   );
+
+  // Миграция старых черновиков: size → exportSize, margin → marginPercent
+  const draft = useMemo(() => {
+    const style = { ...rawDraft.style };
+
+    // Если нет exportSize, но есть старый size - мигрируем
+    if (!style.exportSize && (style as any).size) {
+      style.exportSize = (style as any).size;
+      delete (style as any).size;
+    }
+
+    // Если нет marginPercent, но есть старый margin - конвертируем в проценты
+    if (style.marginPercent === undefined && (style as any).margin !== undefined) {
+      const oldMargin = (style as any).margin;
+      style.marginPercent = Math.min(QR_SYSTEM.MARGIN.MAX, Math.max(QR_SYSTEM.MARGIN.MIN, oldMargin * 2));
+      delete (style as any).margin;
+    }
+
+    // Устанавливаем дефолтные значения если их нет
+    if (!style.exportSize) {
+      style.exportSize = QR_SYSTEM.EXPORT.DEFAULT_SIZE;
+    }
+    if (style.marginPercent === undefined) {
+      style.marginPercent = QR_SYSTEM.MARGIN.DEFAULT;
+    }
+
+    return { ...rawDraft, style };
+  }, [rawDraft]);
 
   const [activeTab, setActiveTab] = useState<"content" | "style" | "advanced">("content");
   const [qrPayload, setQrPayload] = useState("");
@@ -385,8 +412,9 @@ export function GeneratorNew() {
     if (svg) {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-      let intrinsicWidth = draft.style.size;
-      let intrinsicHeight = draft.style.size;
+      // Preview всегда использует фиксированный размер
+      let intrinsicWidth: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      let intrinsicHeight: number = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
 
       const widthAttr = Number(svg.getAttribute("width"));
       const heightAttr = Number(svg.getAttribute("height"));
@@ -405,11 +433,11 @@ export function GeneratorNew() {
 
     const canvas = container.querySelector("canvas") as HTMLCanvasElement | null;
     if (canvas) {
-      const intrinsicWidth = canvas.width || draft.style.size;
-      const intrinsicHeight = canvas.height || draft.style.size;
+      const intrinsicWidth = canvas.width || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      const intrinsicHeight = canvas.height || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
       applyScale(canvas, intrinsicWidth, intrinsicHeight);
     }
-  }, [draft.style.size]);
+  }, []); // Убрали зависимость от draft.style - preview всегда фиксированный
 
   const schedulePreviewFit = useCallback(() => {
     if (typeof window === "undefined") {
@@ -431,27 +459,31 @@ export function GeneratorNew() {
     [setDraft]
   );
 
-  const clampMargin = useCallback((value: number) => {
-    if (Number.isNaN(value)) return MIN_MARGIN;
-    return Math.min(MAX_MARGIN, Math.max(MIN_MARGIN, Math.round(value)));
-  }, []);
-
   const handleMarginChange = useCallback(
-    (value: number) => {
-      const next = clampMargin(value);
-      updateStyle({ margin: next });
-      schedulePreviewFit();
-    },
-    [clampMargin, schedulePreviewFit, updateStyle]
-  );
-
-  const handleSizeChange = useCallback(
-    (value: number) => {
-      const next = Math.min(MAX_QR_SIZE, Math.max(MIN_QR_SIZE, Math.round(value / QR_SIZE_STEP) * QR_SIZE_STEP));
-      updateStyle({ size: next });
+    (percent: number) => {
+      const clamped = Math.min(
+        QR_SYSTEM.MARGIN.MAX,
+        Math.max(QR_SYSTEM.MARGIN.MIN, Math.round(percent))
+      );
+      updateStyle({ marginPercent: clamped });
       schedulePreviewFit();
     },
     [schedulePreviewFit, updateStyle]
+  );
+
+  const handleExportSizeChange = useCallback(
+    (value: number) => {
+      const clamped = Math.min(
+        QR_SYSTEM.EXPORT.MAX_SIZE,
+        Math.max(
+          QR_SYSTEM.EXPORT.MIN_SIZE,
+          Math.round(value / QR_SYSTEM.EXPORT.STEP) * QR_SYSTEM.EXPORT.STEP
+        )
+      );
+      // Размер экспорта НЕ влияет на preview - не вызываем schedulePreviewFit!
+      updateStyle({ exportSize: clamped });
+    },
+    [updateStyle]
   );
 
   const updateGradient = (key: GradientKey, updater: (current: Gradient) => Gradient) => {
@@ -568,13 +600,17 @@ export function GeneratorNew() {
     if (!QRCodeStylingCtor) return;
 
     if (!qrRef.current) {
+      // Preview всегда использует фиксированный размер 512px
+      const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
+
       const instance = new QRCodeStylingCtor({
         type: "svg",
-        width: draft.style.size,
-        height: draft.style.size,
+        width: previewSize,
+        height: previewSize,
         data: "https://t.me/durov",
         image: undefined,
-        margin: draft.style.margin,
+        margin: previewMargin,
         qrOptions: {
           errorCorrectionLevel: draft.style.errorCorrection,
           mode: "Byte"
@@ -591,7 +627,7 @@ export function GeneratorNew() {
       instance.applyExtension(spacingExtension);
       schedulePreviewFit();
     }
-  }, [QRCodeStylingCtor, draft.style.errorCorrection, draft.style.hideBackgroundDots, draft.style.logoSize, draft.style.margin, draft.style.size, schedulePreviewFit]);
+  }, [QRCodeStylingCtor, draft.style.errorCorrection, draft.style.hideBackgroundDots, draft.style.logoSize, draft.style.marginPercent, schedulePreviewFit]);
 
   const formValues = useMemo(() => {
     const scoped: Record<string, string> = {};
@@ -664,14 +700,18 @@ export function GeneratorNew() {
     triggerHaptic('medium');
     setQrPayload(payload);
 
+    // Preview всегда использует фиксированный размер
+    const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+    const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
+
     const options: any = {
       type: "svg",
       data: bytesToBinaryString(encodedBytes),
-      width: draft.style.size,
-      height: draft.style.size,
+      width: previewSize,
+      height: previewSize,
       image: draft.style.logoDataUrl,
       shape: draft.style.shape,
-      margin: draft.style.margin,
+      margin: previewMargin,
       moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
@@ -733,9 +773,10 @@ export function GeneratorNew() {
     regenerate();
   }, [regenerate, hydrated]);
 
+  // Preview размер фиксированный, но margin нужно обновлять
   useEffect(() => {
     schedulePreviewFit();
-  }, [draft.style.margin, draft.style.size, schedulePreviewFit]);
+  }, [draft.style.marginPercent, schedulePreviewFit]);
 
   const exportBlob = useCallback(
     async (format: "png" | "svg") => {
@@ -748,7 +789,63 @@ export function GeneratorNew() {
 
       try {
         const payload = qrPayload || activeDefinition.buildPayload(formValues);
-        const blob = await qrRef.current.getRawData(format);
+        const encoder = new TextEncoder();
+        const encodedBytes = encoder.encode(payload);
+
+        // Для экспорта используем размер из настроек
+        const exportSize = draft.style.exportSize;
+        const exportMargin = calculateMarginPx(exportSize, draft.style.marginPercent);
+
+        // Создаем временный экземпляр с размером для экспорта
+        const exportOptions: any = {
+          type: "svg",
+          data: bytesToBinaryString(encodedBytes),
+          width: exportSize,
+          height: exportSize,
+          image: draft.style.logoDataUrl,
+          shape: draft.style.shape,
+          margin: exportMargin,
+          moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
+          qrOptions: {
+            errorCorrectionLevel: draft.style.errorCorrection,
+            mode: "Byte"
+          },
+          dotsOptions: {
+            ...(draft.style.useDotsGradient && draft.style.dotsGradient
+              ? { gradient: draft.style.dotsGradient }
+              : { color: draft.style.foreground }),
+            type: draft.style.dotStyle
+          },
+          backgroundOptions: {
+            ...(draft.style.useBackgroundGradient && draft.style.backgroundGradient
+              ? { gradient: draft.style.backgroundGradient }
+              : { color: draft.style.background })
+          },
+          cornersSquareOptions: {
+            ...(draft.style.useCornersGradient && draft.style.cornersGradient
+              ? { gradient: draft.style.cornersGradient }
+              : { color: draft.style.foreground }),
+            type: draft.style.eyeOuter
+          },
+          cornersDotOptions: {
+            ...(draft.style.useCornersGradient && draft.style.cornersGradient
+              ? { gradient: draft.style.cornersGradient }
+              : { color: draft.style.foreground }),
+            type: draft.style.eyeInner
+          },
+          imageOptions: {
+            imageSize: draft.style.logoSize / 100,
+            margin: 4,
+            hideBackgroundDots: draft.style.hideBackgroundDots,
+            saveAsBlob: true
+          }
+        };
+
+        // Создаем временный экземпляр для экспорта
+        const exportQR = new QRCodeStylingCtor(exportOptions);
+        exportQR.applyExtension(spacingExtension);
+
+        const blob = await exportQR.getRawData(format);
         if (!blob) {
           return;
         }
@@ -799,7 +896,7 @@ export function GeneratorNew() {
         setIsLoading(false);
       }
     },
-    [regenerate, qrPayload, activeDefinition, formValues]
+    [regenerate, qrPayload, activeDefinition, formValues, draft.style, QRCodeStylingCtor]
   );
 
   const isLightColor = (color: string) => {
@@ -1491,20 +1588,27 @@ export function GeneratorNew() {
 
       {/* Advanced Tab */}
       <div className={classNames(styles.tabContent, { [styles.tabContentActive]: activeTab === "advanced" })}>
+        <div className={styles.infoCard}>
+          ℹ️ <strong>Важно:</strong> Размер экспорта не влияет на превью. Превью всегда оптимизировано для экрана устройства.
+        </div>
+
         <div className={styles.rangeGroup}>
           <label className={styles.inputLabel}>
-            <span>📏 Размер QR-кода</span>
-            <span className={styles.rangeValue}>{draft.style.size}px</span>
+            <span>📏 Размер экспорта (для скачивания)</span>
+            <span className={styles.rangeValue}>{draft.style.exportSize}px</span>
           </label>
           <input
             type="range"
             className={styles.rangeInput}
-            min={MIN_QR_SIZE}
-            max={MAX_QR_SIZE}
-            step={QR_SIZE_STEP}
-            value={draft.style.size}
-            onChange={(e) => handleSizeChange(Number(e.target.value))}
+            min={QR_SYSTEM.EXPORT.MIN_SIZE}
+            max={QR_SYSTEM.EXPORT.MAX_SIZE}
+            step={QR_SYSTEM.EXPORT.STEP}
+            value={draft.style.exportSize}
+            onChange={(e) => handleExportSizeChange(Number(e.target.value))}
           />
+          <div className={styles.rangeHint}>
+            От {QR_SYSTEM.EXPORT.MIN_SIZE}px (веб) до {QR_SYSTEM.EXPORT.MAX_SIZE}px (печать, билборды)
+          </div>
         </div>
 
         <div className={styles.rangeGroup}>
@@ -1534,16 +1638,16 @@ export function GeneratorNew() {
 
         <div className={styles.rangeGroup}>
           <label className={styles.inputLabel}>
-            <span>🖼️ Отступ</span>
-            <span className={styles.rangeValue}>{draft.style.margin}px</span>
+            <span>🖼️ Отступ (Quiet Zone)</span>
+            <span className={styles.rangeValue}>{draft.style.marginPercent}%</span>
           </label>
           <input
             type="range"
             className={styles.rangeInput}
-            min={MIN_MARGIN}
-            max={MAX_MARGIN}
-            step={1}
-            value={draft.style.margin}
+            min={QR_SYSTEM.MARGIN.MIN}
+            max={QR_SYSTEM.MARGIN.MAX}
+            step={QR_SYSTEM.MARGIN.STEP}
+            value={draft.style.marginPercent}
             onChange={(e) => handleMarginChange(Number(e.target.value))}
             onInput={(e) => handleMarginChange(Number((e.target as HTMLInputElement).value))}
           />
@@ -1551,7 +1655,7 @@ export function GeneratorNew() {
             <button
               type="button"
               className={styles.rangeStepper}
-              onClick={() => handleMarginChange(draft.style.margin - 1)}
+              onClick={() => handleMarginChange(draft.style.marginPercent - QR_SYSTEM.MARGIN.STEP)}
               aria-label="Уменьшить отступ"
             >
               −
@@ -1559,19 +1663,23 @@ export function GeneratorNew() {
             <input
               type="number"
               className={styles.rangeNumber}
-              min={MIN_MARGIN}
-              max={MAX_MARGIN}
-              value={draft.style.margin}
+              min={QR_SYSTEM.MARGIN.MIN}
+              max={QR_SYSTEM.MARGIN.MAX}
+              step={QR_SYSTEM.MARGIN.STEP}
+              value={draft.style.marginPercent}
               onChange={(event) => handleMarginChange(Number(event.target.value))}
             />
             <button
               type="button"
               className={styles.rangeStepper}
-              onClick={() => handleMarginChange(draft.style.margin + 1)}
+              onClick={() => handleMarginChange(draft.style.marginPercent + QR_SYSTEM.MARGIN.STEP)}
               aria-label="Увеличить отступ"
             >
               +
             </button>
+          </div>
+          <div className={styles.rangeHint}>
+            В процентах от размера QR. 8% = стандарт, 0% = без отступа.
           </div>
         </div>
 
