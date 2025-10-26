@@ -387,6 +387,7 @@
 .preview__canvas {
   width: 100%;
   max-width: 300px;
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -399,6 +400,7 @@
   height: auto !important;
   max-width: 100% !important;
   object-fit: contain;
+  display: block;
 }
 
 .preview__actions {
