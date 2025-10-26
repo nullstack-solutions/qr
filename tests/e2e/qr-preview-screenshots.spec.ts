@@ -1,0 +1,308 @@
+import { test, expect } from '@playwright/test';
+import { tgMock } from './tg-mock';
+
+const repoBasePath =
+  process.env.NEXT_PUBLIC_BASE_PATH ??
+  process.env.BASE_PATH ??
+  (process.env.GITHUB_ACTIONS ? `/${process.env.GITHUB_REPOSITORY?.split('/')[1] ?? ''}` : '');
+
+const sanitizedBasePath = repoBasePath?.replace(/^\/+/, '').replace(/\/+$/, '') ?? '';
+const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
+
+const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
+
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.config.workers === 1) {
+    page.on('console', (msg) => console.log(`[console:${msg.type()}] ${msg.text()}`));
+    page.on('pageerror', (error) => console.log(`[pageerror] ${error.message}`));
+  }
+
+  await page.addInitScript((value) => {
+    const stub = () => {};
+    const baseWebApp = value?.WebApp ?? {};
+
+    const stubbedWebApp = {
+      ...baseWebApp,
+      ready: stub,
+      expand: stub,
+      close: stub,
+      enableClosingConfirmation: stub,
+      disableClosingConfirmation: stub,
+      onEvent: stub,
+      offEvent: stub,
+      sendData: stub,
+      openLink: stub,
+      openTelegramLink: stub,
+      showPopup: stub,
+      showAlert: stub,
+      showConfirm: stub,
+      showScanQrPopup: stub,
+      closeScanQrPopup: stub,
+      readTextFromClipboard: stub,
+      HapticFeedback: {
+        ...(baseWebApp.HapticFeedback ?? {}),
+        impactOccurred: stub,
+        notificationOccurred: stub,
+        selectionChanged: stub
+      },
+      MainButton: {
+        ...(baseWebApp.MainButton ?? {}),
+        show: stub,
+        hide: stub,
+        setText: stub,
+        enable: stub,
+        disable: stub,
+        showProgress: stub,
+        hideProgress: stub,
+        setParams: stub,
+        onClick: stub,
+        offClick: stub
+      },
+      BackButton: {
+        ...(baseWebApp.BackButton ?? {}),
+        show: stub,
+        hide: stub,
+        onClick: stub,
+        offClick: stub
+      }
+    };
+
+    // @ts-ignore - injected before app bootstraps
+    window.Telegram = { ...value, WebApp: stubbedWebApp };
+  }, tgMock());
+});
+
+test.describe('QR Code Preview Screenshots', () => {
+  test('capture QR preview with default settings', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.waitFor({ state: 'visible' });
+    await urlInput.fill('https://example.com');
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take screenshot of the preview area
+    const preview = page.locator('.preview');
+    await expect(preview).toBeVisible();
+
+    await preview.screenshot({
+      path: `screenshots/qr-preview-default-${testInfo.project.name}.png`,
+      animations: 'disabled'
+    });
+  });
+
+  test('capture QR preview with custom colors', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.fill('https://example.com/custom-colors');
+
+    // Open style tab
+    const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
+    await styleTab.click();
+
+    // Change foreground color (dots color)
+    const colorSection = page.locator('text=🎨 Цвета').first();
+    await expect(colorSection).toBeVisible();
+
+    // Find color inputs and change them
+    const colorInputs = page.locator('input[type="color"]');
+    await colorInputs.nth(0).fill('#FF5733'); // Foreground color
+    await colorInputs.nth(1).fill('#F0F8FF'); // Background color
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    const preview = page.locator('.preview');
+    await preview.screenshot({
+      path: `screenshots/qr-preview-custom-colors-${testInfo.project.name}.png`,
+      animations: 'disabled'
+    });
+  });
+
+  test('capture QR preview with circle shape', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.fill('https://example.com/circle');
+
+    // Open style tab
+    const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
+    await styleTab.click();
+
+    // Find and change shape to circle
+    const geometrySection = page.locator('text=🧩 Геометрия').first();
+    await expect(geometrySection).toBeVisible();
+
+    // Find shape select and change to circle
+    const shapeSelect = page.locator('select').filter({ hasText: 'Квадрат' }).or(page.locator('select').filter({ hasText: 'Круг' })).first();
+    await shapeSelect.selectOption('circle');
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    const preview = page.locator('.preview');
+    await preview.screenshot({
+      path: `screenshots/qr-preview-circle-shape-${testInfo.project.name}.png`,
+      animations: 'disabled'
+    });
+  });
+
+  test('capture QR preview with gradient', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.fill('https://example.com/gradient');
+
+    // Open style tab
+    const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
+    await styleTab.click();
+
+    // Enable gradient for dots
+    const gradientCheckbox = page.locator('input[type="checkbox"]').filter({ has: page.locator('text=/Градиент.*QR/i') }).first();
+    await gradientCheckbox.check();
+
+    // Wait for gradient controls to appear
+    await page.waitForTimeout(500);
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    const preview = page.locator('.preview');
+    await preview.screenshot({
+      path: `screenshots/qr-preview-gradient-${testInfo.project.name}.png`,
+      animations: 'disabled'
+    });
+  });
+
+  test('capture QR preview with different dot styles', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.fill('https://example.com/dot-style');
+
+    // Open style tab
+    const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
+    await styleTab.click();
+
+    // Find dot style select
+    const dotStyleSelect = page.locator('select').filter({ hasText: /Скруглённый|Квадрат|Точки/ }).first();
+    await dotStyleSelect.selectOption('dots');
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    const preview = page.locator('.preview');
+    await preview.screenshot({
+      path: `screenshots/qr-preview-dot-style-${testInfo.project.name}.png`,
+      animations: 'disabled'
+    });
+  });
+
+  test('capture full page with QR preview', async ({ page }, testInfo) => {
+    const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    test.skip(
+      hasWebKitProject && testInfo.project.name.includes('Android'),
+      'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
+    );
+
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+    // Wait for the page to load
+    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+
+    // Fill in URL field
+    const urlInput = page.locator('input[placeholder*="https://"]').first();
+    await urlInput.fill('https://example.com/full-page');
+
+    // Click generate button
+    const generateBtn = page.getByRole('button', { name: 'Собрать QR' });
+    await generateBtn.click();
+
+    // Wait for QR code to render
+    await page.waitForTimeout(1000);
+
+    // Take full page screenshot
+    await page.screenshot({
+      path: `screenshots/qr-full-page-${testInfo.project.name}.png`,
+      fullPage: true,
+      animations: 'disabled'
+    });
+  });
+});
