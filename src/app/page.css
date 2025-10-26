@@ -341,11 +341,18 @@
   box-shadow: var(--shadow-sm);
 }
 
+.preview__canvas {
+  padding: var(--spacing-md);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+}
+
 .preview__canvas canvas,
 .preview__canvas svg {
   width: 100% !important;
   height: auto !important;
   max-width: 300px;
+  display: block;
 }
 
 .preview__actions {
