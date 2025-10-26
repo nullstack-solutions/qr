@@ -138,8 +138,8 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Find color inputs and change them
     const colorInputs = page.locator('input[type="color"]');
-    await colorInputs.nth(0).fill('#FF5733'); // Foreground color
-    await colorInputs.nth(1).fill('#F0F8FF'); // Background color
+    await colorInputs.nth(0).evaluate((el: HTMLInputElement, value: string) => el.value = value, '#FF5733'); // Foreground color
+    await colorInputs.nth(1).evaluate((el: HTMLInputElement, value: string) => el.value = value, '#F0F8FF'); // Background color
 
     // Click generate button
     const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
