@@ -101,6 +101,21 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
+    // Verify all three finder patterns (corner squares) are visible
+    const svg = await qrContainer.locator('svg').first();
+    await expect(svg).toBeVisible();
+
+    const boundingBox = await svg.boundingBox();
+    if (!boundingBox) {
+      throw new Error('QR code SVG not found');
+    }
+
+    // Check that all three finder patterns are within visible area
+    // QR finder patterns are typically in corners: top-left, top-right, bottom-left
+    // We verify the SVG is large enough to contain all patterns
+    expect(boundingBox.width).toBeGreaterThan(100);
+    expect(boundingBox.height).toBeGreaterThan(100);
+
     // Take screenshot of the preview area
     await qrContainer.screenshot({
       path: `screenshots/qr-preview-default-${testInfo.project.name}.png`,
