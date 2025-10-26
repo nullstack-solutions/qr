@@ -341,11 +341,21 @@
   box-shadow: var(--shadow-sm);
 }
 
+.preview__canvas {
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview__canvas > div,
 .preview__canvas canvas,
 .preview__canvas svg {
   width: 100% !important;
   height: auto !important;
-  max-width: 300px;
+  max-width: 100% !important;
+  object-fit: contain;
 }
 
 .preview__actions {
