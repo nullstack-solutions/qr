@@ -82,8 +82,12 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab to be visible (it's the default tab)
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+
+    // Wait for QR preview container with CSS module class pattern
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -95,13 +99,10 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take screenshot of the preview area
-    const preview = page.locator('.preview');
-    await expect(preview).toBeVisible();
-
-    await preview.screenshot({
+    await qrContainer.screenshot({
       path: `screenshots/qr-preview-default-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -116,8 +117,12 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab to be visible (it's the default tab)
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+
+    // Wait for QR preview container
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -141,11 +146,10 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take screenshot
-    const preview = page.locator('.preview');
-    await preview.screenshot({
+    await qrContainer.screenshot({
       path: `screenshots/qr-preview-custom-colors-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -160,8 +164,10 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab and QR preview container
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -184,11 +190,10 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take screenshot
-    const preview = page.locator('.preview');
-    await preview.screenshot({
+    await qrContainer.screenshot({
       path: `screenshots/qr-preview-circle-shape-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -203,8 +208,10 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab and QR preview container
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -226,11 +233,10 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take screenshot
-    const preview = page.locator('.preview');
-    await preview.screenshot({
+    await qrContainer.screenshot({
       path: `screenshots/qr-preview-gradient-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -245,8 +251,10 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab and QR preview container
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -265,11 +273,10 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take screenshot
-    const preview = page.locator('.preview');
-    await preview.screenshot({
+    await qrContainer.screenshot({
       path: `screenshots/qr-preview-dot-style-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -284,8 +291,10 @@ test.describe('QR Code Preview Screenshots', () => {
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-    // Wait for the page to load
-    await page.waitForSelector('.preview__canvas', { timeout: 30_000 });
+    // Wait for the generator tab and QR preview container
+    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    const qrContainer = page.locator('[class*="qrPreview"]').first();
+    await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
     const urlInput = page.locator('input[placeholder*="https://"]').first();
@@ -296,7 +305,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await generateBtn.click();
 
     // Wait for QR code to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Take full page screenshot
     await page.screenshot({
