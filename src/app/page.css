@@ -386,7 +386,7 @@
 
 .preview__canvas {
   width: 100%;
-  max-width: 300px;
+  max-width: 150px;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
