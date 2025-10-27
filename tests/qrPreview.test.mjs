@@ -21,11 +21,11 @@ test("preview__canvas has container styles for proper QR display", async () => {
     ".preview__canvas should have width: 100%"
   );
 
-  // Check that .preview__canvas has max-width constraint
+  // Check that .preview__canvas has the updated max-width constraint
   assert.match(
     css,
-    /\.preview__canvas\s*{[^}]*max-width:\s*300px/,
-    ".preview__canvas should have max-width: 300px"
+    /\.preview__canvas\s*{[^}]*max-width:\s*150px/,
+    ".preview__canvas should have max-width: 150px"
   );
 
   // Check that .preview__canvas maintains a square aspect ratio
