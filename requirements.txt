@@ -1,0 +1,2 @@
+# Placeholder requirements file to satisfy actions/setup-python caching in CI.
+# This project is primarily Node.js-based and currently has no Python dependencies.
