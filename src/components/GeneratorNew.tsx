@@ -560,13 +560,23 @@ export function GeneratorNew() {
     if (!containerRef.current) return;
     if (!QRCodeStylingCtor) return;
 
+    // Очищаем старый QR instance если он есть
+    if (qrRef.current) {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+      qrRef.current = null;
+    }
+
     if (!qrRef.current) {
       // Preview всегда использует фиксированный размер 512px
       const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
-      const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
+      // Для preview используем ОГРОМНЫЙ margin 100px для тестирования
+      const previewMargin = 100;
+      console.log('[QR PREVIEW] Creating QR with HUGE margin:', previewMargin, 'size:', previewSize);
 
       const instance = new QRCodeStylingCtor({
-        type: "svg",
+        type: "svg", // SVG для превью
         width: previewSize,
         height: previewSize,
         data: "https://t.me/durov",

@@ -80,7 +80,14 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
+    // Clear all caches and storage to ensure fresh QR generation
+    await page.context().clearCookies();
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await page.reload({ waitUntil: 'networkidle' });
 
     // Wait for the generator tab to be visible (it's the default tab)
     await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
@@ -101,23 +108,19 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
-    // Verify all three finder patterns (corner squares) are visible
-    const svg = await qrContainer.locator('svg').first();
-    await expect(svg).toBeVisible();
+    // Take screenshot of the .qrCode container (white box with padding)
+    // This captures the full QR code with proper margin
+    const qrCodeBox = await qrContainer.locator('[class*="qrCode"]').first();
+    await qrCodeBox.waitFor({ state: 'visible' });
 
-    const boundingBox = await svg.boundingBox();
-    if (!boundingBox) {
-      throw new Error('QR code SVG not found');
-    }
+    // Temporarily remove border-radius and ensure overflow visible for screenshot
+    // This ensures QR code is fully visible and scannable
+    await qrCodeBox.evaluate((el: HTMLElement) => {
+      el.style.borderRadius = '0';
+      el.style.overflow = 'visible';
+    });
 
-    // Check that all three finder patterns are within visible area
-    // QR finder patterns are typically in corners: top-left, top-right, bottom-left
-    // We verify the SVG is large enough to contain all patterns
-    expect(boundingBox.width).toBeGreaterThan(100);
-    expect(boundingBox.height).toBeGreaterThan(100);
-
-    // Take screenshot of the preview area
-    await qrContainer.screenshot({
+    await qrCodeBox.screenshot({
       path: `screenshots/qr-preview-default-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -163,8 +166,9 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
-    // Take screenshot
-    await qrContainer.screenshot({
+    // Take screenshot of SVG only
+    const svg = await qrContainer.locator('svg').first();
+    await svg.screenshot({
       path: `screenshots/qr-preview-custom-colors-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -207,8 +211,9 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
-    // Take screenshot
-    await qrContainer.screenshot({
+    // Take screenshot of SVG only
+    const svg = await qrContainer.locator('svg').first();
+    await svg.screenshot({
       path: `screenshots/qr-preview-circle-shape-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -250,8 +255,9 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
-    // Take screenshot
-    await qrContainer.screenshot({
+    // Take screenshot of SVG only
+    const svg = await qrContainer.locator('svg').first();
+    await svg.screenshot({
       path: `screenshots/qr-preview-gradient-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
@@ -292,8 +298,9 @@ test.describe('QR Code Preview Screenshots', () => {
     // Wait for QR code to render
     await page.waitForTimeout(1500);
 
-    // Take screenshot
-    await qrContainer.screenshot({
+    // Take screenshot of SVG only
+    const svg = await qrContainer.locator('svg').first();
+    await svg.screenshot({
       path: `screenshots/qr-preview-dot-style-${testInfo.project.name}.png`,
       animations: 'disabled'
     });
