@@ -345,7 +345,7 @@
 .preview__canvas svg {
   width: 100% !important;
   height: auto !important;
-  max-width: 300px;
+  max-width: 150px;
 }
 
 .preview__actions {
