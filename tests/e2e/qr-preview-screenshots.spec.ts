@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import fs from 'node:fs/promises';
 import { tgMock } from './tg-mock';
 
 const repoBasePath =
@@ -10,6 +11,88 @@ const sanitizedBasePath = repoBasePath?.replace(/^\/+/, '').replace(/\/+$/, '') 
 const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
+
+type MetadataScope = 'container' | 'page';
+
+async function writeCanvasMetadata(
+  page: Page,
+  screenshotPath: string,
+  canvasLocator: Locator,
+  scope: MetadataScope,
+  referenceLocator?: Locator,
+  payload?: string
+) {
+  const devicePixelRatio = await page.evaluate(() => window.devicePixelRatio ?? 1);
+
+  const canvasRect = await canvasLocator.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height
+    };
+  });
+
+  let cropRect = { ...canvasRect };
+
+  if (scope === 'container' && referenceLocator) {
+    const containerRect = await referenceLocator.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+      };
+    });
+
+    cropRect = {
+      x: canvasRect.x - containerRect.x,
+      y: canvasRect.y - containerRect.y,
+      width: canvasRect.width,
+      height: canvasRect.height
+    };
+  }
+
+  const scrollOffset = await page.evaluate(() => ({
+    x: window.scrollX ?? 0,
+    y: window.scrollY ?? 0
+  }));
+
+  const metadata: Record<string, unknown> = {
+    scope,
+    devicePixelRatio,
+    canvas: canvasRect,
+    crop: cropRect
+  };
+
+  if (scope === 'page' || scrollOffset.x || scrollOffset.y) {
+    metadata.scroll = scrollOffset;
+  }
+
+  if (typeof payload === 'string') {
+    metadata.payload = payload;
+  }
+
+  await fs.writeFile(`${screenshotPath}.json`, JSON.stringify(metadata, null, 2), 'utf8');
+}
+
+async function capturePreviewScreenshot(
+  page: Page,
+  qrContainer: Locator,
+  filename: string,
+  payload: string
+) {
+  const path = `screenshots/${filename}`;
+  await qrContainer.screenshot({
+    path,
+    animations: 'disabled'
+  });
+
+  const canvas = qrContainer.locator('canvas, svg').first();
+  await writeCanvasMetadata(page, path, canvas, 'container', qrContainer, payload);
+}
 
 test.beforeEach(async ({ page }, testInfo) => {
   if (testInfo.config.workers === 1) {
@@ -102,10 +185,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take screenshot of the preview area
-    await qrContainer.screenshot({
-      path: `screenshots/qr-preview-default-${testInfo.project.name}.png`,
-      animations: 'disabled'
-    });
+    await capturePreviewScreenshot(
+      page,
+      qrContainer,
+      `qr-preview-default-${testInfo.project.name}.png`,
+      'https://example.com'
+    );
   });
 
   test('capture QR preview with custom colors', async ({ page }, testInfo) => {
@@ -149,10 +234,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take screenshot
-    await qrContainer.screenshot({
-      path: `screenshots/qr-preview-custom-colors-${testInfo.project.name}.png`,
-      animations: 'disabled'
-    });
+    await capturePreviewScreenshot(
+      page,
+      qrContainer,
+      `qr-preview-custom-colors-${testInfo.project.name}.png`,
+      'https://example.com/custom-colors'
+    );
   });
 
   test('capture QR preview with circle shape', async ({ page }, testInfo) => {
@@ -193,10 +280,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take screenshot
-    await qrContainer.screenshot({
-      path: `screenshots/qr-preview-circle-shape-${testInfo.project.name}.png`,
-      animations: 'disabled'
-    });
+    await capturePreviewScreenshot(
+      page,
+      qrContainer,
+      `qr-preview-circle-shape-${testInfo.project.name}.png`,
+      'https://example.com/circle'
+    );
   });
 
   test('capture QR preview with gradient', async ({ page }, testInfo) => {
@@ -236,10 +325,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take screenshot
-    await qrContainer.screenshot({
-      path: `screenshots/qr-preview-gradient-${testInfo.project.name}.png`,
-      animations: 'disabled'
-    });
+    await capturePreviewScreenshot(
+      page,
+      qrContainer,
+      `qr-preview-gradient-${testInfo.project.name}.png`,
+      'https://example.com/gradient'
+    );
   });
 
   test('capture QR preview with different dot styles', async ({ page }, testInfo) => {
@@ -278,10 +369,12 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take screenshot
-    await qrContainer.screenshot({
-      path: `screenshots/qr-preview-dot-style-${testInfo.project.name}.png`,
-      animations: 'disabled'
-    });
+    await capturePreviewScreenshot(
+      page,
+      qrContainer,
+      `qr-preview-dot-style-${testInfo.project.name}.png`,
+      'https://example.com/dot-style'
+    );
   });
 
   test('capture full page with QR preview', async ({ page }, testInfo) => {
@@ -310,10 +403,21 @@ test.describe('QR Code Preview Screenshots', () => {
     await page.waitForTimeout(1500);
 
     // Take full page screenshot
+    const fullPagePath = `screenshots/qr-full-page-${testInfo.project.name}.png`;
     await page.screenshot({
-      path: `screenshots/qr-full-page-${testInfo.project.name}.png`,
+      path: fullPagePath,
       fullPage: true,
       animations: 'disabled'
     });
+
+    const canvas = page.locator('[class*="qrPreview"]').first().locator('canvas, svg').first();
+    await writeCanvasMetadata(
+      page,
+      fullPagePath,
+      canvas,
+      'page',
+      undefined,
+      'https://example.com/full-page'
+    );
   });
 });

@@ -20,4 +20,7 @@ public/workers/*.js.map
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Generated preview screenshots
 /screenshots/
+!/screenshots/README.md
