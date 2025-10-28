@@ -4,46 +4,36 @@
 
 This project includes automated tests to ensure QR codes are **fully visible and scannable**.
 
-### Python QR Validation Test
+### Playwright QR Scannability Test
 
-The `testValidQrScrenshots.py` test uses the `pyzbar` library to verify that all QR code screenshots contain valid, scannable QR codes with all three finder patterns (corner squares) visible.
+The `tests/e2e/qr-scannable.spec.ts` suite opens the generator, renders several QR variants and decodes the resulting preview with [`jsqr`](https://github.com/cozmo/jsQR). This keeps the entire workflow inside Node.js and mirrors how users interact with the rendered canvas.
 
 #### Local Setup
 
-1. Install Python dependencies:
 ```bash
-pip install -r requirements-test.txt
+npm install
+npx playwright install
 ```
 
-2. On Linux/macOS, install zbar library:
-```bash
-# Ubuntu/Debian
-sudo apt-get install libzbar0
-
-# macOS
-brew install zbar
-```
-
-3. On Windows, pyzbar should work out of the box after pip install.
-
-#### Running QR Validation Tests
+#### Running the scannability checks
 
 ```bash
-# Run Playwright tests first to generate screenshots
+# Run the full E2E suite (includes the scannability spec)
 npm run test:e2e
 
-# Then validate QR codes are scannable
-python -m pytest tests/testValidQrScrenshots.py -v
+# Or focus on the QR decoder checks only
+npx playwright test tests/e2e/qr-scannable.spec.ts --project="Android-like Chromium"
 ```
 
-#### What the test checks
+#### What the test covers
 
-- All screenshots in the `screenshots/` folder are scanned
-- Each QR code must be decodable by pyzbar
-- If any QR code cannot be decoded, the test fails with details
+- Default URL payloads rendered in the preview canvas
+- Multiple dot styles and gradient combinations
+- Non-Latin text payloads (Cyrillic and emoji)
+- Guarantees that the preview canvas remains square and fully visible
 
-This ensures QR codes are not cropped and have proper margin/padding for reliable scanning.
+All assertions rely on decoding the screenshot pixels, so if the QR code becomes cropped, blurred or otherwise unreadable, the test fails with a clear message.
 
 ## CI/CD Integration
 
-The QR validation test runs automatically in GitHub Actions after Playwright tests complete. If QR codes are cropped or malformed, the CI pipeline will fail.
+GitHub Actions runs the Playwright suite via `npm run test:e2e`. The job surfaces decoded payload mismatches directly in the logs, making scannability regressions easy to spot.
