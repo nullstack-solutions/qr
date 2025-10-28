@@ -12,13 +12,16 @@ const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
 
-const primaryUrlInputSelector = '[data-testid="qr-input-url"]';
-const legacyUrlInputSelector = 'label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
+const urlInputSelector = [
+  '[data-testid="qr-input-url"]',
+  'input[name="url"]',
+  'textarea[name="url"]',
+  'label:has-text("Ссылка") + input',
+  'input[placeholder*="example.com/page"]'
+].join(', ');
 
 function getUrlInputLocator(page: Page) {
-  const primary = page.locator(primaryUrlInputSelector).first();
-  const legacy = page.locator(legacyUrlInputSelector).first();
-  return primary.or(legacy);
+  return page.locator(urlInputSelector).first();
 }
 
 async function openGeneratorTab(page: Page) {
@@ -28,6 +31,7 @@ async function openGeneratorTab(page: Page) {
 
   try {
     await generatorTab.waitFor({ state: 'visible', timeout: 30_000 });
+    await generatorTab.click();
   } catch (error) {
     // Fallback for locales or renderers where the button label differs—ensure the
     // generator inputs are present so the rest of the test can proceed.

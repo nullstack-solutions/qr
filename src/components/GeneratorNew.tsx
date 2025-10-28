@@ -944,33 +944,46 @@ export function GeneratorNew() {
             <span>{activeDefinition.title}</span>
             <span className={styles.badge}>{activeDefinition.description}</span>
           </label>
-          {activeDefinition.fields.map((field) => (
-            <div key={field.name} className={styles.inputGroup}>
-              <label className={styles.inputLabel}>
-                <span>{field.label}{field.required && " *"}</span>
-              </label>
-              {field.type === "textarea" ? (
-                <textarea
-                  data-testid={`qr-input-${field.name}`}
-                  className={classNames(styles.textarea, { error: Boolean(errors[field.name]) })}
-                  value={formValues[field.name] ?? ""}
-                  onChange={(e) => updateValue(field.name, e.target.value)}
-                  placeholder={field.placeholder}
-                />
-              ) : (
-                <input
-                  data-testid={`qr-input-${field.name}`}
-                  type={field.type === "email" ? "email" : field.type === "number" ? "number" : "text"}
-                  className={classNames(styles.input, { error: Boolean(errors[field.name]) })}
-                  value={formValues[field.name] ?? ""}
-                  onChange={(e) => updateValue(field.name, e.target.value)}
-                  placeholder={field.placeholder}
-                />
-              )}
-              {field.helper && <small style={{ fontSize: "12px", opacity: 0.6, marginTop: "4px" }}>{field.helper}</small>}
-              {errors[field.name] && <span className="error-text">{errors[field.name]}</span>}
-            </div>
-          ))}
+          {activeDefinition.fields.map((field) => {
+            const fieldId = `qr-input-${field.name}`;
+
+            return (
+              <div key={field.name} className={styles.inputGroup}>
+                <label className={styles.inputLabel} htmlFor={fieldId}>
+                  <span>
+                    {field.label}
+                    {field.required && " *"}
+                  </span>
+                </label>
+                {field.type === "textarea" ? (
+                  <textarea
+                    id={fieldId}
+                    name={field.name}
+                    data-testid={`qr-input-${field.name}`}
+                    className={classNames(styles.textarea, { error: Boolean(errors[field.name]) })}
+                    value={formValues[field.name] ?? ""}
+                    onChange={(e) => updateValue(field.name, e.target.value)}
+                    placeholder={field.placeholder}
+                  />
+                ) : (
+                  <input
+                    id={fieldId}
+                    name={field.name}
+                    data-testid={`qr-input-${field.name}`}
+                    type={field.type === "email" ? "email" : field.type === "number" ? "number" : "text"}
+                    className={classNames(styles.input, { error: Boolean(errors[field.name]) })}
+                    value={formValues[field.name] ?? ""}
+                    onChange={(e) => updateValue(field.name, e.target.value)}
+                    placeholder={field.placeholder}
+                  />
+                )}
+                {field.helper && (
+                  <small style={{ fontSize: "12px", opacity: 0.6, marginTop: "4px" }}>{field.helper}</small>
+                )}
+                {errors[field.name] && <span className="error-text">{errors[field.name]}</span>}
+              </div>
+            );
+          })}
           {errors.__payload && <span className="error-text">{errors.__payload}</span>}
         </div>
 
