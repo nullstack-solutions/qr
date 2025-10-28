@@ -950,6 +950,7 @@ export function GeneratorNew() {
               </label>
               {field.type === "textarea" ? (
                 <textarea
+                  data-testid={`qr-input-${field.name}`}
                   className={classNames(styles.textarea, { error: Boolean(errors[field.name]) })}
                   value={formValues[field.name] ?? ""}
                   onChange={(e) => updateValue(field.name, e.target.value)}
@@ -957,6 +958,7 @@ export function GeneratorNew() {
                 />
               ) : (
                 <input
+                  data-testid={`qr-input-${field.name}`}
                   type={field.type === "email" ? "email" : field.type === "number" ? "number" : "text"}
                   className={classNames(styles.input, { error: Boolean(errors[field.name]) })}
                   value={formValues[field.name] ?? ""}

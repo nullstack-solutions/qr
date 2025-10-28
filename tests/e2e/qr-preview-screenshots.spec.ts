@@ -12,7 +12,8 @@ const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
 
-const urlInputSelector = 'label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
+const urlInputSelector =
+  '[data-testid="qr-input-url"], label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
 
 function getUrlInputLocator(page: Page) {
   return page.locator(urlInputSelector).first();
