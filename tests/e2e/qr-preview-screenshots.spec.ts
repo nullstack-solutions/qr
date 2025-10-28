@@ -100,7 +100,7 @@ test.beforeEach(async ({ page }, testInfo) => {
     page.on('pageerror', (error) => console.log(`[pageerror] ${error.message}`));
   }
 
-  await page.addInitScript((value) => {
+  await page.addInitScript((value: ReturnType<typeof tgMock>) => {
     const stub = () => {};
     const baseWebApp = value?.WebApp ?? {};
 
@@ -128,9 +128,12 @@ test.beforeEach(async ({ page }, testInfo) => {
       setNavigationBarColor: stub
     };
 
-    window.Telegram = tgMock;
-    window.Telegram.WebApp = stubbedWebApp;
-  }, tgMock);
+    const globalWindow = window as typeof window & { Telegram: ReturnType<typeof tgMock> };
+    globalWindow.Telegram = {
+      ...value,
+      WebApp: stubbedWebApp
+    };
+  }, tgMock());
 });
 
 test.describe('QR Code Preview Screenshots', () => {
