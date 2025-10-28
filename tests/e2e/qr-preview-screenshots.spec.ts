@@ -12,6 +12,12 @@ const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
 
+const urlInputSelector = 'label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
+
+function getUrlInputLocator(page: Page) {
+  return page.locator(urlInputSelector).first();
+}
+
 async function openGeneratorTab(page: Page) {
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
@@ -22,9 +28,7 @@ async function openGeneratorTab(page: Page) {
   } catch (error) {
     // Fallback for locales or renderers where the button label differs—ensure the
     // generator inputs are present so the rest of the test can proceed.
-    await expect(
-      page.locator('input[placeholder*="example.com/page"]').first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(getUrlInputLocator(page)).toBeVisible({ timeout: 30_000 });
   }
 
   return generatorTab;
@@ -173,7 +177,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.waitFor({ state: 'visible' });
     await urlInput.fill('https://example.com');
 
@@ -207,7 +211,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.fill('https://example.com/custom-colors');
 
     // Open style tab
@@ -252,7 +256,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.fill('https://example.com/circle');
 
     // Open style tab
@@ -296,7 +300,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.fill('https://example.com/gradient');
 
     // Open style tab
@@ -339,7 +343,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.fill('https://example.com/dot-style');
 
     // Open style tab
@@ -381,7 +385,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
     // Fill in URL field
-    const urlInput = page.locator('input[placeholder*="example.com/page"]').first();
+    const urlInput = getUrlInputLocator(page);
     await urlInput.fill('https://example.com/full-page');
 
     // Click generate button
