@@ -82,8 +82,8 @@ test("preview__canvas has container styles for proper QR display", async () => {
   assert.equal(rule.declarationMap.width, "100%", ".preview__canvas should have width: 100%");
   assert.equal(
     rule.declarationMap["max-width"],
-    "150px",
-    ".preview__canvas should have max-width: 150px"
+    "300px",
+    ".preview__canvas should have max-width: 300px"
   );
   assert.equal(
     rule.declarationMap["aspect-ratio"],
@@ -120,13 +120,18 @@ test("preview__canvas child elements have responsive sizing", async () => {
   );
   assert.equal(
     rule.declarationMap.height,
-    "auto !important",
-    ".preview__canvas > div, canvas, svg should have height: auto !important"
+    "100% !important",
+    ".preview__canvas > div, canvas, svg should have height: 100% !important"
   );
   assert.equal(
     rule.declarationMap["max-width"],
     "100% !important",
     ".preview__canvas > div, canvas, svg should have max-width: 100% !important"
+  );
+  assert.equal(
+    rule.declarationMap["max-height"],
+    "100% !important",
+    ".preview__canvas > div, canvas, svg should have max-height: 100% !important"
   );
   assert.equal(
     rule.declarationMap["object-fit"],
