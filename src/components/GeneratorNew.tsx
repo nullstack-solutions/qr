@@ -924,6 +924,7 @@ export function GeneratorNew() {
             {QR_TEMPLATES.map((template) => (
               <div
                 key={template.type}
+                data-testid={`qr-template-${template.type}`}
                 className={classNames(styles.templateCard, {
                   [styles.templateCardActive]: draft.type === template.type
                 })}

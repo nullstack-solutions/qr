@@ -12,11 +12,13 @@ const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
 
-const urlInputSelector =
-  '[data-testid="qr-input-url"], label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
+const primaryUrlInputSelector = '[data-testid="qr-input-url"]';
+const legacyUrlInputSelector = 'label:has-text("Ссылка") + input, input[placeholder*="example.com/page"]';
 
 function getUrlInputLocator(page: Page) {
-  return page.locator(urlInputSelector).first();
+  const primary = page.locator(primaryUrlInputSelector).first();
+  const legacy = page.locator(legacyUrlInputSelector).first();
+  return primary.or(legacy);
 }
 
 async function openGeneratorTab(page: Page) {
@@ -31,6 +33,10 @@ async function openGeneratorTab(page: Page) {
     // generator inputs are present so the rest of the test can proceed.
     await expect(getUrlInputLocator(page)).toBeVisible({ timeout: 30_000 });
   }
+
+  const urlTemplate = page.getByTestId('qr-template-url').first();
+  await expect(urlTemplate).toBeVisible({ timeout: 30_000 });
+  await urlTemplate.click();
 
   return generatorTab;
 }
@@ -122,6 +128,14 @@ test.beforeEach(async ({ page }, testInfo) => {
     page.on('console', (msg) => console.log(`[console:${msg.type()}] ${msg.text()}`));
     page.on('pageerror', (error) => console.log(`[pageerror] ${error.message}`));
   }
+
+  await page.addInitScript(() => {
+    try {
+      window.localStorage?.clear?.();
+    } catch (error) {
+      // Ignore storage access issues in environments without localStorage support.
+    }
+  });
 
   await page.addInitScript((value: ReturnType<typeof tgMock>) => {
     const stub = () => {};
