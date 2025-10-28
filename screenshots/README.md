@@ -15,5 +15,6 @@ Alongside every `.png` file the Playwright suite stores a `.png.json` metadata f
 device pixel ratio used during capture. The validation test uses this metadata to crop the generated screenshots precisely and
 prove that each rendered QR remains scannable.
 
-All generated assets remain ignored by Git. The Python test `tests/testValidQrScrenshots.py` expects the screenshots to be
-present and fails with a helpful message if they are missing so that the pipeline clearly indicates when generation did not run.
+All generated assets remain ignored by Git. The JavaScript Playwright spec `tests/e2e/qr-scannable.spec.ts` decodes the
+captured canvases with `jsqr`, so if a screenshot goes missing or the QR preview becomes unreadable the CI run fails with a
+clear error.
