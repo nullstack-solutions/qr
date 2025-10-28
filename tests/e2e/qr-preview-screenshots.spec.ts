@@ -201,7 +201,33 @@ test.beforeEach(async ({ page }, testInfo) => {
       setBackgroundColor: stub,
       setBottomBarColor: stub,
       setClosingBehavior: stub,
-      setNavigationBarColor: stub
+      setNavigationBarColor: stub,
+      HapticFeedback: {
+        ...(baseWebApp.HapticFeedback ?? {}),
+        impactOccurred: stub,
+        notificationOccurred: stub,
+        selectionChanged: stub
+      },
+      MainButton: {
+        ...(baseWebApp.MainButton ?? {}),
+        show: stub,
+        hide: stub,
+        setText: stub,
+        enable: stub,
+        disable: stub,
+        showProgress: stub,
+        hideProgress: stub,
+        setParams: stub,
+        onClick: stub,
+        offClick: stub
+      },
+      BackButton: {
+        ...(baseWebApp.BackButton ?? {}),
+        show: stub,
+        hide: stub,
+        onClick: stub,
+        offClick: stub
+      }
     };
 
     const globalWindow = window as typeof window & { Telegram: ReturnType<typeof tgMock> };
