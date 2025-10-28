@@ -878,8 +878,8 @@ export function GeneratorNew() {
 
   return (
     <section className={styles.generator}>
-      <div className={styles.qrPreview}>
-        <div className={styles.qrCode}>
+      <div className={classNames(styles.qrPreview, "preview")}>
+        <div className={classNames(styles.qrCode, "preview__canvas")}>
           <div ref={containerRef} className={styles.qrCanvas} />
         </div>
       </div>
@@ -1688,7 +1688,7 @@ export function GeneratorNew() {
       </div>
 
       {/* Fixed Action Buttons */}
-      <div className={styles.actionButtons}>
+      <div className={classNames(styles.actionButtons, "preview__actions")}>
         <button
           className={classNames(styles.btn, styles.btnSecondary)}
           onClick={() => {
