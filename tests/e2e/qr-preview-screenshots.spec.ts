@@ -15,7 +15,7 @@ const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePat
 async function openGeneratorTab(page: Page) {
   await page.goto(APP_URL, { waitUntil: 'networkidle' });
 
-  const generatorTab = page.getByRole('button', { name: '🎨 Генератор' });
+  const generatorTab = page.getByRole('button', { name: /Генератор/ });
   await generatorTab.waitFor({ state: 'visible', timeout: 30_000 });
 
   return generatorTab;
