@@ -42,6 +42,8 @@ async function openGeneratorTab(page: Page) {
   await expect(urlTemplate).toBeVisible({ timeout: 30_000 });
   await urlTemplate.click();
 
+  await expect(getUrlInputLocator(page)).toBeVisible({ timeout: 30_000 });
+
   return generatorTab;
 }
 
@@ -141,6 +143,39 @@ test.beforeEach(async ({ page }, testInfo) => {
     }
   });
 
+  await page.addInitScript(() => {
+    if (typeof indexedDB === 'undefined') {
+      return;
+    }
+
+    const deleteDb = (name: string) =>
+      new Promise<void>((resolve) => {
+        if (!name) {
+          resolve();
+          return;
+        }
+
+        try {
+          const request = indexedDB.deleteDatabase(name);
+          const finish = () => resolve();
+          request.addEventListener('success', finish);
+          request.addEventListener('error', finish);
+          request.addEventListener('blocked', finish);
+        } catch (error) {
+          resolve();
+        }
+      });
+
+    if (typeof indexedDB.databases === 'function') {
+      indexedDB
+        .databases()
+        .then((dbs) => Promise.allSettled(dbs.map((db) => deleteDb(db.name ?? ''))))
+        .catch(() => deleteDb('qr-suite'));
+    } else {
+      deleteDb('qr-suite');
+    }
+  });
+
   await page.addInitScript((value: ReturnType<typeof tgMock>) => {
     const stub = () => {};
     const baseWebApp = value?.WebApp ?? {};
@@ -197,7 +232,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
-    await urlInput.waitFor({ state: 'visible' });
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com');
 
     // Click generate button
@@ -231,6 +266,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com/custom-colors');
 
     // Open style tab
@@ -276,6 +312,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com/circle');
 
     // Open style tab
@@ -320,6 +357,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com/gradient');
 
     // Open style tab
@@ -363,6 +401,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com/dot-style');
 
     // Open style tab
@@ -405,6 +444,7 @@ test.describe('QR Code Preview Screenshots', () => {
 
     // Fill in URL field
     const urlInput = getUrlInputLocator(page);
+    await urlInput.waitFor({ state: 'visible', timeout: 30_000 });
     await urlInput.fill('https://example.com/full-page');
 
     // Click generate button
