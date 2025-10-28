@@ -253,9 +253,9 @@
 }
 
 .form__field label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-label);
   font-weight: 500;
-  color: var(--tg-text, #000000);
+  color: var(--text, #000000);
 }
 
 /* TMA Premium Design System - Form Controls */
@@ -305,8 +305,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--font-size-xs);
-  color: var(--tg-hint, rgba(11, 18, 32, 0.6));
+  font-size: var(--font-small);
+  color: var(--hint, rgba(11, 18, 32, 0.6));
 }
 
 /* TMA Premium Design System - Panel */
@@ -324,12 +324,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
-  font-size: var(--font-size-base);
+  font-size: var(--font-body);
 }
 
 .panel__field label {
   font-weight: 500;
-  color: var(--tg-text, #000000);
+  color: var(--text, #000000);
 }
 
 .panel__thumb {
@@ -343,7 +343,7 @@
   height: 48px;
   object-fit: contain;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--tg-secondary, rgba(12, 33, 66, 0.1));
+  border: 1px solid var(--surface-border, rgba(12, 33, 66, 0.1));
 }
 
 /* Range input field improvements */
@@ -357,17 +357,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-label);
 }
 
 .range-header span {
   font-weight: 500;
-  color: var(--tg-text, #000000);
+  color: var(--text, #000000);
 }
 
 .range-header strong {
   font-weight: 600;
-  color: var(--tg-accent, #2864ff);
+  color: var(--accent, #2864ff);
 }
 
 /* TMA Premium Design System - Preview */
@@ -484,7 +484,7 @@
 .text {
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.06);
-  color: var(--tg-destructive, #ff4d4f);
+  color: var(--destructive, #ff4d4f);
 }
 
 .text:hover {
@@ -515,12 +515,12 @@
 }
 
 .error {
-  border-color: var(--tg-destructive, #ff6b6b) !important;
+  border-color: var(--destructive, #ff6b6b) !important;
 }
 
 .error-text {
-  color: var(--tg-destructive, #d93025);
-  font-size: var(--font-size-sm);
+  color: var(--destructive, #d93025);
+  font-size: var(--font-caption);
 }
 
 .batch {
@@ -596,28 +596,28 @@
 .batch__preview table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-caption);
 }
 
 .batch__preview th,
 .batch__preview td {
   text-align: left;
   padding: var(--spacing-xs) var(--spacing-sm);
-  border-bottom: 1px solid var(--tg-secondary, rgba(12, 33, 66, 0.1));
+  border-bottom: 1px solid var(--surface-border, rgba(12, 33, 66, 0.1));
 }
 
 .batch__preview tr.error td {
-  color: var(--tg-destructive, #d93025);
+  color: var(--destructive, #d93025);
 }
 
 .progress {
-  font-size: var(--font-size-sm);
-  color: var(--tg-hint, rgba(11, 18, 32, 0.7));
+  font-size: var(--font-caption);
+  color: var(--hint, rgba(11, 18, 32, 0.7));
 }
 
 .hint {
-  font-size: var(--font-size-sm);
-  color: var(--tg-hint, rgba(11, 18, 32, 0.6));
+  font-size: var(--font-caption);
+  color: var(--hint, rgba(11, 18, 32, 0.6));
 }
 
 .ok {
@@ -756,7 +756,7 @@
 
 .scanner__results code {
   word-break: break-all;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-small);
 }
 
 /* TMA Premium Design System - Small Pill */
@@ -784,8 +784,8 @@
 
 .page__footer {
   text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--tg-hint, rgba(11, 18, 32, 0.6));
+  font-size: var(--font-caption);
+  color: var(--hint, rgba(11, 18, 32, 0.6));
   padding: var(--spacing-md) 0;
 }
 
