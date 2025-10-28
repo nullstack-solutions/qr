@@ -12,6 +12,15 @@ const normalizedBasePath = sanitizedBasePath ? `/${sanitizedBasePath}` : '';
 
 const APP_URL = process.env.APP_URL ?? `http://localhost:3000${normalizedBasePath}`;
 
+async function openGeneratorTab(page: Page) {
+  await page.goto(APP_URL, { waitUntil: 'networkidle' });
+
+  const generatorTab = page.getByRole('button', { name: '🎨 Генератор' });
+  await generatorTab.waitFor({ state: 'visible', timeout: 30_000 });
+
+  return generatorTab;
+}
+
 type MetadataScope = 'container' | 'page';
 
 async function writeCanvasMetadata(
@@ -148,10 +157,7 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
-
-    // Wait for the generator tab to be visible (it's the default tab)
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    await openGeneratorTab(page);
 
     // Wait for QR preview container with CSS module class pattern
     const qrContainer = page.locator('[class*="qrPreview"]').first();
@@ -185,10 +191,7 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
-
-    // Wait for the generator tab to be visible (it's the default tab)
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
+    await openGeneratorTab(page);
 
     // Wait for QR preview container
     const qrContainer = page.locator('[class*="qrPreview"]').first();
@@ -234,10 +237,8 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await openGeneratorTab(page);
 
-    // Wait for the generator tab and QR preview container
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
     const qrContainer = page.locator('[class*="qrPreview"]').first();
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
@@ -280,10 +281,8 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await openGeneratorTab(page);
 
-    // Wait for the generator tab and QR preview container
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
     const qrContainer = page.locator('[class*="qrPreview"]').first();
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
@@ -325,10 +324,8 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await openGeneratorTab(page);
 
-    // Wait for the generator tab and QR preview container
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
     const qrContainer = page.locator('[class*="qrPreview"]').first();
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
@@ -369,10 +366,8 @@ test.describe('QR Code Preview Screenshots', () => {
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await openGeneratorTab(page);
 
-    // Wait for the generator tab and QR preview container
-    await page.waitForSelector('button:has-text("🎨 Генератор")', { timeout: 30_000 });
     const qrContainer = page.locator('[class*="qrPreview"]').first();
     await qrContainer.waitFor({ state: 'visible', timeout: 30_000 });
 
