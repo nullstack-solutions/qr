@@ -34,8 +34,10 @@
   width: min(100%, 420px);
   max-width: min(420px, calc(100vw - 32px));
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--spacing-lg);
   align-items: center;
+  justify-content: center;
   min-height: clamp(240px, 60vw, 320px);
   position: relative;
   overflow: hidden;
@@ -54,9 +56,6 @@
 }
 
 .qrCode {
-  --qr-max-height: clamp(160px, calc(100vh - 220px), 360px);
-  --qr-max-width: clamp(160px, calc(100vw - 96px), 360px);
-  --qr-output-size: min(100%, var(--qr-max-width), var(--qr-max-height));
   padding: clamp(32px, 10%, 64px);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -65,27 +64,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: var(--qr-output-size);
+  width: 100%;
   max-width: 100%;
-  max-height: var(--qr-max-height);
-  aspect-ratio: 1 / 1;
   pointer-events: none;
   user-select: none;
   background: white;
-  overflow: hidden;
   box-sizing: border-box;
 }
 
 .qrCanvas {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 .qrCanvas :global(canvas),
 .qrCanvas :global(svg) {
