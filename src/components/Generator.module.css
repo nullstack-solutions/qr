@@ -56,7 +56,7 @@
 }
 
 .qrCode {
-  padding: clamp(32px, 10%, 64px);
+  padding: clamp(24px, 8vw, 40px);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   position: relative;
@@ -64,8 +64,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  max-width: 100%;
+  width: min(100%, 360px);
+  aspect-ratio: 1 / 1;
   pointer-events: none;
   user-select: none;
   background: white;
@@ -79,6 +79,10 @@
   max-height: 100%;
   display: grid;
   place-items: center;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
 }
 .qrCanvas :global(div) {
   width: 100%;
@@ -97,6 +101,14 @@
   object-fit: contain;
   display: block;
   margin: 0 auto;
+}
+
+.qrCanvas :global(canvas) {
+  image-rendering: pixelated;
+}
+
+.qrCanvas :global(svg) {
+  shape-rendering: crispEdges;
 }
 
 .tabs {

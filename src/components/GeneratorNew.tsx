@@ -362,10 +362,10 @@ export function GeneratorNew() {
     container.style.height = "100%";
     container.style.maxWidth = "100%";
     container.style.maxHeight = "100%";
-    container.style.display = "flex";
-    container.style.alignItems = "center";
-    container.style.justifyContent = "center";
-    container.style.overflow = "visible";
+    container.style.display = "grid";
+    container.style.setProperty("place-items", "center");
+    container.style.overflow = "hidden";
+    container.style.aspectRatio = "1 / 1";
 
     const firstChild = container.firstElementChild as HTMLElement | null;
     if (firstChild) {
@@ -373,14 +373,21 @@ export function GeneratorNew() {
       firstChild.style.height = "100%";
       firstChild.style.maxWidth = "100%";
       firstChild.style.maxHeight = "100%";
-      firstChild.style.display = "flex";
-      firstChild.style.alignItems = "center";
-      firstChild.style.justifyContent = "center";
-      firstChild.style.overflow = "visible";
+      firstChild.style.display = "grid";
+      firstChild.style.setProperty("place-items", "center");
+      firstChild.style.overflow = "hidden";
+      firstChild.style.aspectRatio = "1 / 1";
     }
 
     const svg = container.querySelector("svg") as SVGElement | null;
     if (svg) {
+      const width = Number(svg.getAttribute("width")) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      const height = Number(svg.getAttribute("height")) || QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
+      if (!svg.getAttribute("viewBox") && width && height) {
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      }
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
       // Не устанавливаем фиксированные размеры - пусть SVG масштабируется естественно
       svg.style.width = "100%";
@@ -388,6 +395,10 @@ export function GeneratorNew() {
       svg.style.maxWidth = "100%";
       svg.style.maxHeight = "100%";
       svg.style.display = "block";
+      svg.style.margin = "0 auto";
+      svg.style.objectFit = "contain";
+      svg.style.setProperty("image-rendering", "pixelated");
+      svg.setAttribute("shape-rendering", "crispEdges");
     }
 
     const canvas = container.querySelector("canvas") as HTMLCanvasElement | null;
@@ -397,6 +408,7 @@ export function GeneratorNew() {
       canvas.style.maxWidth = "100%";
       canvas.style.maxHeight = "100%";
       canvas.style.objectFit = "contain";
+      canvas.style.setProperty("image-rendering", "pixelated");
     }
   }, []); // Убрали зависимость от draft.style - preview всегда фиксированный
 
