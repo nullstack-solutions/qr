@@ -8,21 +8,8 @@
   --hint: #6d6d6d;
   --accent: #3390ec;
   --button: #3390ec;
-
-  /* Legacy Telegram variables for backwards compatibility */
-  --tg-bg: var(--bg);
-  --tg-text: var(--text);
-  --tg-hint: var(--hint);
-  --tg-link: var(--accent);
-  --tg-button: var(--button);
-  --tg-button-text: #ffffff;
-  --tg-secondary: var(--surface);
-  --tg-header-bg: var(--bg);
-  --tg-accent: var(--accent);
-  --tg-section-bg: var(--bg);
-  --tg-section-header: var(--hint);
-  --tg-subtitle: #999999;
-  --tg-destructive: #ff3b30;
+  --destructive: #ff3b30;
+  --surface-border: rgba(12, 33, 66, 0.1);
 
   /* Spacing Scale - TMA Premium */
   --spacing-xs: 8px;
@@ -47,23 +34,15 @@
   --font-caption: 13px;
   --font-small: 11px;
 
-  /* Legacy font sizes */
-  --font-size-xs: 12px;
-  --font-size-sm: var(--font-caption);
-  --font-size-base: 14px;
-  --font-size-md: var(--font-body);
-  --font-size-lg: 16px;
-  --font-size-xl: var(--font-section);
-
   /* Shadows - TMA Premium */
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.15);
-  --shadow-md: 0 4px 12px rgba(51, 144, 236, 0.3);
-  --shadow-lg: 0 8px 24px rgba(51, 144, 236, 0.25);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(51, 144, 236, 0.2);
+  --shadow-lg: 0 8px 24px rgba(51, 144, 236, 0.18);
 
-  /* Transitions - TMA Premium */
-  --transition-fast: 0.2s ease;
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions - TMA Premium (минималистичные) */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
 
   /* Gradients - TMA Premium Presets */
   --gradient-primary: linear-gradient(135deg, var(--accent) 0%, #2b7fd6 100%);
@@ -77,30 +56,22 @@
   --tap-target-min: 44px;
 }
 
-/* Dark mode - TMA Premium Design System */
+/* Dark mode - TMA Premium Design System (WCAG 2.1 AA compliant) */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Color Palette - Dark Mode */
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --text: #ffffff;
-    --hint: #6d6d6d;
-    --accent: #3390ec;
-    --button: #3390ec;
+    /* Color Palette - Dark Mode с правильным контрастом */
+    --bg: #0a0a0a;
+    --surface: #1c1c1e;
+    --text: #f5f5f7;
+    --hint: #8e8e93;
+    --accent: #64b5f6;
+    --button: #64b5f6;
+    --destructive: #ff6b6b;
+    --surface-border: rgba(255, 255, 255, 0.12);
 
-    /* Legacy Telegram variables for backwards compatibility */
-    --tg-bg: var(--bg);
-    --tg-text: var(--text);
-    --tg-hint: var(--hint);
-    --tg-link: var(--accent);
-    --tg-button: var(--button);
-    --tg-button-text: #ffffff;
-    --tg-secondary: var(--surface);
-    --tg-header-bg: var(--bg);
-    --tg-accent: var(--accent);
-    --tg-section-bg: var(--bg);
-    --tg-section-header: #8e8e93;
-    --tg-subtitle: #7d7d81;
-    --tg-destructive: #ff4444;
+    /* Shadows - adjusted for dark mode */
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.6);
+    --shadow-md: 0 4px 12px rgba(100, 181, 246, 0.12);
+    --shadow-lg: 0 8px 24px rgba(100, 181, 246, 0.1);
   }
 }

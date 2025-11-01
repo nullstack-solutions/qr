@@ -1,3 +1,6 @@
+const ALLOWED_WIFI_AUTH = new Set(["WPA", "WPA2", "WEP", "NOPASS"]);
+const ISO_DATETIME_REGEX = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:Z|[+-]\d{2}:\d{2})?$/;
+
 const QR_TYPES = [
   {
     type: "url",
@@ -8,6 +11,7 @@ const QR_TYPES = [
         name: "url",
         label: "Ссылка",
         placeholder: "example.com/page",
+        prefill: "https://example.com",
         required: true,
         validate: (value) => {
           const trimmed = value.trim();
@@ -41,6 +45,7 @@ const QR_TYPES = [
         label: "Текст",
         type: "textarea",
         placeholder: "Введите текст",
+        prefill: "Привет из QR Suite!",
         required: true
       }
     ],
@@ -55,6 +60,7 @@ const QR_TYPES = [
         name: "phone",
         label: "Номер",
         placeholder: "+7 900 000-00-00",
+        prefill: "+79991234567",
         required: true,
         validate: (value) => {
           const digits = value.replace(/[^\d+]/g, "");
@@ -76,13 +82,15 @@ const QR_TYPES = [
         name: "phone",
         label: "Номер",
         required: true,
-        placeholder: "+79001234567"
+        placeholder: "+79001234567",
+        prefill: "+79991234567"
       },
       {
         name: "message",
         label: "Сообщение",
         type: "textarea",
-        placeholder: "Текст SMS"
+        placeholder: "Текст SMS",
+        prefill: "Привет! Это демо сообщение."
       }
     ],
     buildPayload: (values) => {
@@ -100,16 +108,19 @@ const QR_TYPES = [
         name: "address",
         label: "Email",
         type: "email",
-        required: true
+        required: true,
+        prefill: "hello@example.com"
       },
       {
         name: "subject",
-        label: "Тема"
+        label: "Тема",
+        prefill: "Встреча"
       },
       {
         name: "body",
         label: "Сообщение",
-        type: "textarea"
+        type: "textarea",
+        prefill: "Коллеги, давайте синхронизируемся завтра."
       }
     ],
     buildPayload: (values) => {
@@ -125,13 +136,41 @@ const QR_TYPES = [
     title: "Геометка",
     description: "Координаты lat,lng",
     fields: [
-      { name: "lat", label: "Широта", required: true, helper: "Напр. 59.9386" },
-      { name: "lng", label: "Долгота", required: true, helper: "Напр. 30.3141" },
-      { name: "label", label: "Описание" }
+      {
+        name: "lat",
+        label: "Широта",
+        required: true,
+        helper: "Напр. 59.9386",
+        prefill: "59.9386",
+        validate: (value) => {
+          if (!value.trim()) return null;
+          const normalized = value.replace(",", ".");
+          const num = Number(normalized);
+          if (!Number.isFinite(num)) return "Используйте числовое значение";
+          if (num < -90 || num > 90) return "Широта от -90 до 90";
+          return null;
+        }
+      },
+      {
+        name: "lng",
+        label: "Долгота",
+        required: true,
+        helper: "Напр. 30.3141",
+        prefill: "30.3141",
+        validate: (value) => {
+          if (!value.trim()) return null;
+          const normalized = value.replace(",", ".");
+          const num = Number(normalized);
+          if (!Number.isFinite(num)) return "Используйте числовое значение";
+          if (num < -180 || num > 180) return "Долгота от -180 до 180";
+          return null;
+        }
+      },
+      { name: "label", label: "Описание", prefill: "Санкт-Петербург" }
     ],
     buildPayload: (values) => {
-      const lat = values.lat?.trim();
-      const lng = values.lng?.trim();
+      const lat = normalizeCoordinate(values.lat, 90);
+      const lng = normalizeCoordinate(values.lng, 180);
       if (!lat || !lng) return "";
       const label = values.label ? `?q=${encodeURIComponent(values.label)}` : "";
       return `geo:${lat},${lng}${label}`;
@@ -142,22 +181,55 @@ const QR_TYPES = [
     title: "Wi-Fi",
     description: "SSID, тип, пароль",
     fields: [
-      { name: "ssid", label: "SSID", required: true },
+      { name: "ssid", label: "SSID", required: true, prefill: "OfficeWiFi" },
       {
         name: "auth",
         label: "Шифрование",
         placeholder: "WPA, WPA2, WEP или nopass",
-        helper: "nopass для открытых сетей"
+        helper: "nopass для открытых сетей",
+        prefill: "WPA2",
+        validate: (value) => {
+          if (!value.trim()) return null;
+          const normalized = value.trim().toUpperCase();
+          if (!ALLOWED_WIFI_AUTH.has(normalized)) {
+            return `Допустимо: ${Array.from(ALLOWED_WIFI_AUTH).join(', ')}`;
+          }
+          return null;
+        }
       },
-      { name: "password", label: "Пароль" },
-      { name: "hidden", label: "Скрытая сеть (true/false)", placeholder: "false" }
+      {
+        name: "password",
+        label: "Пароль",
+        prefill: "SuperSecure123",
+        validate: (value, allValues) => {
+          const auth = normalizeWifiAuth(allValues.auth);
+          if (auth !== "nopass" && !value.trim()) {
+            return "Пароль обязателен для выбранного шифрования";
+          }
+          return null;
+        }
+      },
+      {
+        name: "hidden",
+        label: "Скрытая сеть (true/false)",
+        placeholder: "false",
+        prefill: "false",
+        validate: (value) => {
+          if (!value.trim()) return null;
+          if (!/^(true|false)$/i.test(value.trim())) {
+            return "Введите true или false";
+          }
+          return null;
+        }
+      }
     ],
     buildPayload: (values) => {
       const ssid = values.ssid ?? "";
-      const auth = values.auth?.toUpperCase() || "WPA";
+      const auth = normalizeWifiAuth(values.auth);
       const password = values.password ?? "";
+      const passwordSection = auth === "nopass" ? "" : `;P:${escapeWifiValue(password)}`;
       const hidden = values.hidden?.toLowerCase() === "true" ? ";H:true" : "";
-      return `WIFI:T:${auth};S:${escapeWifiValue(ssid)};P:${escapeWifiValue(password)}${hidden};;`;
+      return `WIFI:T:${auth};S:${escapeWifiValue(ssid)}${passwordSection}${hidden};;`;
     }
   },
   {
@@ -165,14 +237,19 @@ const QR_TYPES = [
     title: "vCard",
     description: "Контакты vCard 3.0",
     fields: [
-      { name: "firstName", label: "Имя", required: true },
-      { name: "lastName", label: "Фамилия" },
-      { name: "organization", label: "Компания" },
-      { name: "title", label: "Должность" },
-      { name: "phone", label: "Телефон" },
-      { name: "email", label: "Email" },
-      { name: "website", label: "Сайт" },
-      { name: "notes", label: "Заметки", type: "textarea" }
+      { name: "firstName", label: "Имя", required: true, prefill: "Иван" },
+      { name: "lastName", label: "Фамилия", prefill: "Иванов" },
+      { name: "organization", label: "Компания", prefill: "ООО «Пример»" },
+      { name: "title", label: "Должность", prefill: "Менеджер" },
+      { name: "phone", label: "Телефон", prefill: "+79991234567" },
+      { name: "email", label: "Email", prefill: "ivan@example.com" },
+      { name: "website", label: "Сайт", prefill: "https://example.com" },
+      {
+        name: "notes",
+        label: "Заметки",
+        type: "textarea",
+        prefill: "Будьте на связи"
+      }
     ],
     buildPayload: (values) => {
       const lines = [
@@ -196,11 +273,11 @@ const QR_TYPES = [
     title: "MeCard",
     description: "Компактный формат визитки",
     fields: [
-      { name: "name", label: "Имя", required: true },
-      { name: "phone", label: "Телефон" },
-      { name: "email", label: "Email" },
-      { name: "address", label: "Адрес", type: "textarea" },
-      { name: "note", label: "Заметка", type: "textarea" }
+      { name: "name", label: "Имя", required: true, prefill: "Иван Иванов" },
+      { name: "phone", label: "Телефон", prefill: "+79991234567" },
+      { name: "email", label: "Email", prefill: "ivan@example.com" },
+      { name: "address", label: "Адрес", type: "textarea", prefill: "Россия, Москва" },
+      { name: "note", label: "Заметка", type: "textarea", prefill: "Добавьте меня в контакты" }
     ],
     buildPayload: (values) => {
       const parts = [`MECARD:N:${values.name ?? ""};`];
@@ -217,18 +294,47 @@ const QR_TYPES = [
     title: "Событие ICS",
     description: "iCalendar (VEVENT)",
     fields: [
-      { name: "summary", label: "Заголовок", required: true },
-      { name: "description", label: "Описание", type: "textarea" },
-      { name: "location", label: "Место" },
+      { name: "summary", label: "Заголовок", required: true, prefill: "Командный созвон" },
+      {
+        name: "description",
+        label: "Описание",
+        type: "textarea",
+        prefill: "Повестка: результаты спринта"
+      },
+      { name: "location", label: "Место", prefill: "Офис, переговорная 1" },
       {
         name: "start",
         label: "Начало (ISO 8601)",
-        placeholder: "2024-03-12T10:00"
+        placeholder: "2024-03-12T10:00",
+        prefill: "2024-03-12T10:00",
+        validate: (value) => {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          if (!isValidISODateTime(trimmed)) {
+            return "Используйте формат ISO 8601";
+          }
+          return null;
+        }
       },
       {
         name: "end",
         label: "Конец (ISO 8601)",
-        placeholder: "2024-03-12T12:00"
+        placeholder: "2024-03-12T12:00",
+        prefill: "2024-03-12T11:00",
+        validate: (value, allValues) => {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          if (!isValidISODateTime(trimmed)) {
+            return "Используйте формат ISO 8601";
+          }
+          const start = allValues.start?.trim();
+          if (start && isValidISODateTime(start)) {
+            if (new Date(trimmed) <= new Date(start)) {
+              return "Окончание должно быть позже начала";
+            }
+          }
+          return null;
+        }
       }
     ],
     buildPayload: (values) => {
@@ -244,16 +350,40 @@ const QR_TYPES = [
   }
 ];
 
+function normalizeWifiAuth(value) {
+  const upper = (value ?? "").trim().toUpperCase();
+  if (upper === "NOPASS") return "nopass";
+  if (ALLOWED_WIFI_AUTH.has(upper)) return upper;
+  return "WPA";
+}
+
 function escapeWifiValue(value) {
-  return value.replace(/([\\;",:])/g, "\\$1");
+  return (value ?? "").replace(/([\\;",:])/g, "\\$1");
+}
+
+function normalizeCoordinate(value, maxAbs) {
+  if (!value) return "";
+  const normalized = value.trim().replace(",", ".");
+  const num = Number(normalized);
+  if (!Number.isFinite(num)) return "";
+  if (Math.abs(num) > maxAbs) return "";
+  return String(num);
+}
+
+function isValidISODateTime(value) {
+  if (!value) return false;
+  if (!ISO_DATETIME_REGEX.test(value)) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
 }
 
 function formatICSDate(value) {
+  if (!isValidISODateTime(value)) {
+    return value;
+  }
+
   try {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
     return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   } catch (error) {
     return value;
