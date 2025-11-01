@@ -23,10 +23,10 @@ const loadWorkerModule = async () => {
   });
 
   const sandboxSelf = { postMessage: () => {} };
-  const module = { exports: {} };
+  const moduleScope = { exports: {} };
   const sandbox = {
-    module,
-    exports: module.exports,
+    module: moduleScope,
+    exports: moduleScope.exports,
     require,
     TextEncoder,
     self: sandboxSelf,
@@ -39,7 +39,7 @@ const loadWorkerModule = async () => {
     filename: path.basename(workerUrl.pathname)
   });
 
-  return { exports: module.exports, self: sandboxSelf };
+  return { exports: moduleScope.exports, self: sandboxSelf };
 };
 
 test("createSegments returns byte segments as Uint8Array", async () => {
