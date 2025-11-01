@@ -8,12 +8,11 @@ const getTelegramWebApp = (): TelegramWebApp | undefined =>
   (typeof window === 'undefined' ? undefined : window.Telegram?.WebApp);
 
 export function useTelegramTheme() {
-  const [theme, setTheme] = useState<TelegramThemeParams>(() => getTelegramWebApp()?.themeParams ?? {});
-  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(
-    () => getTelegramWebApp()?.colorScheme ?? 'light'
-  );
-
   const webApp = getTelegramWebApp();
+  const [theme, setTheme] = useState<TelegramThemeParams>(() => webApp?.themeParams ?? {});
+  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(
+    () => webApp?.colorScheme ?? 'light'
+  );
 
   useEffect(() => {
     if (!webApp) {
