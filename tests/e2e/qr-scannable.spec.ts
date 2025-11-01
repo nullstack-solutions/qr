@@ -52,12 +52,17 @@ test.describe('QR code scannability', () => {
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    const styleLabels = ['Квадраты', 'Точки', 'Скругленные'];
+    const dotStyleSelect = page.locator('label:has-text("Стиль точек") select').first();
+    await expect(dotStyleSelect).toBeVisible();
 
-    for (const label of styleLabels) {
-      const styleOption = page.locator('[class*="styleOption"]', { hasText: label }).first();
-      await expect(styleOption, `Style option "${label}" should be visible`).toBeVisible({ timeout: 30_000 });
-      await styleOption.click();
+    const styleOptions = [
+      { label: 'Квадраты', value: 'square' },
+      { label: 'Точки', value: 'dots' },
+      { label: 'Скругленные', value: 'rounded' }
+    ];
+
+    for (const { label, value } of styleOptions) {
+      await dotStyleSelect.selectOption(value);
 
       await page.getByRole('button', { name: '⬇️ Скачать QR' }).click();
       await page.waitForTimeout(500);
@@ -68,7 +73,7 @@ test.describe('QR code scannability', () => {
     }
   });
 
-  test('keeps QR readable with gradients enabled', async ({ page }) => {
+  test('keeps QR readable with increased dot spacing', async ({ page }) => {
     await openGeneratorTab(page);
 
     const urlInput = getUrlInputLocator(page);
@@ -77,10 +82,14 @@ test.describe('QR code scannability', () => {
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    const gradientCheckbox = page
-      .locator('label:has-text("Использовать градиент")')
-      .locator('input[type="checkbox"]').first();
-    await gradientCheckbox.check();
+    const spacingSlider = page
+      .locator('div:has(>label:has-text("↔️ Расстояние между точками")) input[type="range"]')
+      .first();
+    await spacingSlider.evaluate((input: HTMLInputElement) => {
+      input.value = '35';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     await page.getByRole('button', { name: '⬇️ Скачать QR' }).click();
     await page.waitForTimeout(500);

@@ -127,7 +127,7 @@ test.describe('QR Code Preview Screenshots', () => {
     );
   });
 
-  test('capture QR preview with custom colors', async ({ page }, testInfo) => {
+  test('capture QR preview with custom geometry', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
     test.skip(
       hasWebKitProject && testInfo.project.name.includes('Android'),
@@ -149,14 +149,19 @@ test.describe('QR Code Preview Screenshots', () => {
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    // Change foreground color (dots color)
-    const colorSection = page.locator('text=🎨 Цветовая схема').first();
-    await expect(colorSection).toBeVisible();
+    // Ensure geometry controls are visible
+    const geometrySection = page.locator('text=🧩 Геометрия').first();
+    await expect(geometrySection).toBeVisible();
 
-    // Find color inputs and change them
-    const colorInputs = page.locator('input[type="color"]');
-    await colorInputs.nth(0).evaluate((el: HTMLInputElement, value: string) => el.value = value, '#FF5733'); // Foreground color
-    await colorInputs.nth(1).evaluate((el: HTMLInputElement, value: string) => el.value = value, '#F0F8FF'); // Background color
+    // Adjust geometry options
+    const shapeSelect = page.locator('label:has-text("Форма QR") select').first();
+    await shapeSelect.selectOption('circle');
+
+    const dotStyleSelect = page.locator('label:has-text("Стиль точек") select').first();
+    await dotStyleSelect.selectOption('custom:heart');
+
+    const innerEyeSelect = page.locator('label:has-text("Внутренние глазки") select').first();
+    await innerEyeSelect.selectOption('custom:star');
 
     // Click generate button
     const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
@@ -169,7 +174,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await capturePreviewScreenshot(
       page,
       qrContainer,
-      `qr-preview-custom-colors-${testInfo.project.name}.png`,
+      `qr-preview-custom-geometry-${testInfo.project.name}.png`,
       'https://example.com/custom-colors'
     );
   });
@@ -199,8 +204,7 @@ test.describe('QR Code Preview Screenshots', () => {
     const geometrySection = page.locator('text=🧩 Геометрия').first();
     await expect(geometrySection).toBeVisible();
 
-    // Find shape select and change to circle
-    const shapeSelect = page.locator('select').filter({ hasText: 'Квадрат' }).or(page.locator('select').filter({ hasText: 'Круг' })).first();
+    const shapeSelect = page.locator('label:has-text("Форма QR") select').first();
     await shapeSelect.selectOption('circle');
 
     // Click generate button
@@ -219,7 +223,7 @@ test.describe('QR Code Preview Screenshots', () => {
     );
   });
 
-  test('capture QR preview with gradient', async ({ page }, testInfo) => {
+  test('capture QR preview with increased dot spacing', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
     test.skip(
       hasWebKitProject && testInfo.project.name.includes('Android'),
@@ -240,12 +244,14 @@ test.describe('QR Code Preview Screenshots', () => {
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    // Enable gradient for dots - find the first gradient checkbox (for dots section)
-    const gradientCheckbox = page.locator('input[type="checkbox"]').first();
-    await gradientCheckbox.check();
-
-    // Wait for gradient controls to appear
-    await page.waitForTimeout(500);
+    const spacingSlider = page
+      .locator('div:has(>label:has-text("↔️ Расстояние между точками")) input[type="range"]')
+      .first();
+    await spacingSlider.evaluate((input: HTMLInputElement) => {
+      input.value = '25';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     // Click generate button
     const generateBtn = page.getByRole('button', { name: '⬇️ Скачать QR' });
@@ -258,7 +264,7 @@ test.describe('QR Code Preview Screenshots', () => {
     await capturePreviewScreenshot(
       page,
       qrContainer,
-      `qr-preview-gradient-${testInfo.project.name}.png`,
+      `qr-preview-spacing-${testInfo.project.name}.png`,
       'https://example.com/gradient'
     );
   });
