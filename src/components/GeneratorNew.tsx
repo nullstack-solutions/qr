@@ -7,6 +7,14 @@ import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
 import { QR_SYSTEM, calculateMarginPx } from "@/lib/qrConstants";
 import styles from "./Generator.module.css";
+import {
+  SVG_NS,
+  applyCustomDotShape,
+  applyDotSpacing,
+  clampSpacing,
+  CUSTOM_DOT_SHAPES,
+  isCustomDotShapeSupported,
+} from "@/lib/qrCustomShapes.mjs";
 
 // Haptic feedback helper
 function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
@@ -68,47 +76,6 @@ type ShapeType = "square" | "circle";
 type GradientType = "linear" | "radial";
 type GradientKey = "dotsGradient" | "backgroundGradient" | "cornersGradient";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-function clampSpacing(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 0.6) return 0.6;
-  return value;
-}
-
-function applyDotSpacing(svg: SVGElement, spacing: number) {
-  const safeSpacing = clampSpacing(spacing);
-
-  // Always apply spacing transformation, even when spacing = 0
-  // This ensures we override any default spacing from the library
-  const scale = 1 - safeSpacing;
-  const rects = svg.querySelectorAll("rect");
-
-  rects.forEach((rect) => {
-    const width = Number(rect.getAttribute("width"));
-    const height = Number(rect.getAttribute("height"));
-    if (!width || !height) return;
-    if (width > 40 || height > 40) return;
-
-    const x = Number(rect.getAttribute("x"));
-    const y = Number(rect.getAttribute("y"));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    const newWidth = width * scale;
-    const newHeight = height * scale;
-    const newX = centerX - newWidth / 2;
-    const newY = centerY - newHeight / 2;
-
-    rect.setAttribute("x", newX.toFixed(3));
-    rect.setAttribute("y", newY.toFixed(3));
-    rect.setAttribute("width", newWidth.toFixed(3));
-    rect.setAttribute("height", newHeight.toFixed(3));
-  });
-}
-
 function ensureCircleLogo(svg: SVGElement, options: any) {
   const image = svg.querySelector("image");
   if (!image) {
@@ -156,8 +123,14 @@ function ensureCircleLogo(svg: SVGElement, options: any) {
 
 function spacingExtension(svg: SVGElement, options: any) {
   const spacing = clampSpacing(Number(options.moduleSpacing ?? 0));
-  // Always apply spacing, even when it's 0, to override library defaults
-  applyDotSpacing(svg, spacing);
+  const customShape = options.customDotShape;
+
+  if (isCustomDotShapeSupported(customShape)) {
+    applyCustomDotShape(svg, customShape, spacing);
+  } else {
+    applyDotSpacing(svg, spacing);
+  }
+
   ensureCircleLogo(svg, options);
 }
 
@@ -187,6 +160,7 @@ interface StyleOptions {
   logoSize: number;
   shape: ShapeType;
   dotSpacing: number;
+  customDotShape?: string;
   useDotsGradient: boolean;
   dotsGradient?: Gradient;
   useBackgroundGradient: boolean;
@@ -214,6 +188,7 @@ const defaultStyle: StyleOptions = {
   logoSize: 18,
   shape: "square",
   dotSpacing: 0,
+  customDotShape: undefined,
   useDotsGradient: false,
   dotsGradient: {
     type: "linear",
@@ -695,6 +670,7 @@ export function GeneratorNew() {
       shape: draft.style.shape,
       margin: previewMargin,
       moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
+      customDotShape: draft.style.customDotShape,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
         mode: "Byte"
@@ -731,7 +707,12 @@ export function GeneratorNew() {
     };
 
     const finalizePreview = () => {
-      qrRef.current?.applyExtension(spacingExtension);
+      qrRef.current?.applyExtension((svg: SVGElement, opts: any) =>
+        spacingExtension(svg, {
+          ...opts,
+          customDotShape: draft.style.customDotShape
+        })
+      );
       schedulePreviewFit();
     };
 
@@ -788,6 +769,7 @@ export function GeneratorNew() {
           shape: draft.style.shape,
           margin: exportMargin,
           moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
+          customDotShape: draft.style.customDotShape,
           qrOptions: {
             errorCorrectionLevel: draft.style.errorCorrection,
             mode: "Byte"
@@ -825,7 +807,12 @@ export function GeneratorNew() {
 
         // Создаем временный экземпляр для экспорта
         const exportQR = new QRCodeStylingCtor(exportOptions);
-        exportQR.applyExtension(spacingExtension);
+        exportQR.applyExtension((svg: SVGElement, opts: any) =>
+          spacingExtension(svg, {
+            ...opts,
+            customDotShape: draft.style.customDotShape
+          })
+        );
 
         const blob = await exportQR.getRawData(format);
         if (!blob) {
@@ -1158,6 +1145,29 @@ export function GeneratorNew() {
               </select>
             </label>
           </div>
+
+          {draft.style.dotStyle === "square" && (
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Кастомная форма точек
+              </label>
+              <select
+                value={draft.style.customDotShape || ""}
+                onChange={(e) => {
+                  updateStyle({ customDotShape: e.target.value || undefined });
+                  triggerHaptic('light');
+                }}
+                className={styles.select}
+              >
+                <option value="">Стандартная</option>
+                {CUSTOM_DOT_SHAPES.map((shape) => (
+                  <option key={shape.id} value={shape.id}>
+                    {shape.emoji} {shape.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className={styles.rangeGroup}>
             <label className={styles.inputLabel}>
