@@ -3,7 +3,7 @@
 4:I[97367,["/qr/test/_next/static/chunks/37537d6f7b50c978.js"],"MetadataBoundary"]
 5:"$Sreact.suspense"
 :HL["/qr/test/_next/static/chunks/8ecac1febe649df7.css","style"]
-:HL["/qr/test/_next/static/chunks/217e382acc900b49.css","style"]
-0:{"buildId":"oqce7tpTuRNQWmZrTGu0o","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"head":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],null]}],"isHeadPartial":false,"staleTime":300}
+:HL["/qr/test/_next/static/chunks/4e5a9300eff76922.css","style"]
+0:{"buildId":"gyQbkq3QxnaJQXQ_91ZxN","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"head":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],null]}],"isHeadPartial":false,"staleTime":300}
 3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
 6:[["$","title","0",{"children":"QR Suite"}],["$","meta","1",{"name":"description","content":"Генератор, пакетная сборка и сканер QR-кодов"}]]
