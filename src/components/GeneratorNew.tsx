@@ -10,6 +10,7 @@ import styles from "./Generator.module.css";
 import {
   SVG_NS,
   applyCustomDotShape,
+  applyCustomInnerEyeShape,
   applyDotSpacing,
   clampSpacing,
   CUSTOM_DOT_SHAPES,
@@ -23,59 +24,12 @@ function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
   }
 }
 
-function hexToRgb(hex: string) {
-  const sanitized = hex.replace('#', '');
-  if (sanitized.length === 3) {
-    const r = parseInt(sanitized[0] + sanitized[0], 16);
-    const g = parseInt(sanitized[1] + sanitized[1], 16);
-    const b = parseInt(sanitized[2] + sanitized[2], 16);
-    return { r, g, b };
-  }
-  if (sanitized.length !== 6) {
-    return null;
-  }
-  const r = parseInt(sanitized.slice(0, 2), 16);
-  const g = parseInt(sanitized.slice(2, 4), 16);
-  const b = parseInt(sanitized.slice(4, 6), 16);
-  if ([r, g, b].some((component) => Number.isNaN(component))) {
-    return null;
-  }
-  return { r, g, b };
-}
-
-function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }) {
-  const srgb = [r, g, b].map((value) => {
-    const channel = value / 255;
-    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
-}
-
-function getContrastRatio(foreground: string, background: string) {
-  const fg = hexToRgb(foreground);
-  const bg = hexToRgb(background);
-  if (!fg || !bg) return 0;
-  const l1 = relativeLuminance(fg) + 0.05;
-  const l2 = relativeLuminance(bg) + 0.05;
-  return l1 > l2 ? l1 / l2 : l2 / l1;
-}
-
-function radiansToDegrees(radians?: number) {
-  return Math.round(((radians ?? 0) * 180) / Math.PI);
-}
-
-function degreesToRadians(degrees: number) {
-  return (degrees * Math.PI) / 180;
-}
-
 type ErrorCorrection = "L" | "M" | "Q" | "H";
 type DotStyle = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
 type EyeStyle = "square" | "extra-rounded" | "dot";
 type EyeDotStyle = "square" | "dot";
 type ShapeType = "square" | "circle";
 type GradientType = "linear" | "radial";
-type GradientKey = "dotsGradient" | "backgroundGradient" | "cornersGradient";
-
 function ensureCircleLogo(svg: SVGElement, options: any) {
   const image = svg.querySelector("image");
   if (!image) {
@@ -124,11 +78,18 @@ function ensureCircleLogo(svg: SVGElement, options: any) {
 function spacingExtension(svg: SVGElement, options: any) {
   const spacing = clampSpacing(Number(options.moduleSpacing ?? 0));
   const customShape = options.customDotShape;
+  const customEyeShape = options.customEyeInnerShape;
 
   if (isCustomDotShapeSupported(customShape)) {
-    applyCustomDotShape(svg, customShape, spacing);
+    applyCustomDotShape(svg, customShape, spacing, {
+      skipInnerEyes: isCustomDotShapeSupported(customEyeShape),
+    });
   } else {
     applyDotSpacing(svg, spacing);
+  }
+
+  if (isCustomDotShapeSupported(customEyeShape)) {
+    applyCustomInnerEyeShape(svg, customEyeShape);
   }
 
   ensureCircleLogo(svg, options);
@@ -161,6 +122,7 @@ interface StyleOptions {
   shape: ShapeType;
   dotSpacing: number;
   customDotShape?: string;
+  customEyeInnerShape?: string;
   useDotsGradient: boolean;
   dotsGradient?: Gradient;
   useBackgroundGradient: boolean;
@@ -189,6 +151,7 @@ const defaultStyle: StyleOptions = {
   shape: "square",
   dotSpacing: 0,
   customDotShape: undefined,
+  customEyeInnerShape: undefined,
   useDotsGradient: false,
   dotsGradient: {
     type: "linear",
@@ -225,14 +188,6 @@ function fieldKey(type: QRType, field: string) {
   return `${type}.${field}`;
 }
 
-// Color presets
-const COLOR_PRESETS = [
-  { name: "Классический", emoji: "⚫", fg: "#000000", bg: "#ffffff" },
-  { name: "Современный", emoji: "🔵", fg: "#667eea", bg: "#f0f4ff" },
-  { name: "Природа", emoji: "🌿", fg: "#2d5016", bg: "#f5f1e8" },
-  { name: "Закат", emoji: "🌅", fg: "#ff6b35", bg: "#ffe5d9" }
-];
-
 // Template mapping for QR types - ALL 10 TYPES
 const QR_TEMPLATES = [
   { type: "url", emoji: "🌐", name: "URL", desc: "Ссылка на сайт" },
@@ -247,21 +202,28 @@ const QR_TEMPLATES = [
   { type: "ics", emoji: "📅", name: "Событие", desc: "Календарь" }
 ];
 
-// Style presets
-const STYLE_PRESETS = [
-  { id: "square", emoji: "⬛", label: "Квадраты", dotStyle: "square" as DotStyle },
-  { id: "dots", emoji: "⚫", label: "Точки", dotStyle: "dots" as DotStyle },
-  { id: "rounded", emoji: "🔘", label: "Скругленные", dotStyle: "rounded" as DotStyle },
-  { id: "elegant", emoji: "💎", label: "Элегантный", dotStyle: "extra-rounded" as DotStyle }
-];
+type DotStyleSelectOption = {
+  id: string;
+  label: string;
+  value: string;
+  dotStyle: DotStyle;
+  customShape?: string;
+};
 
-const DOT_STYLE_OPTIONS: { value: DotStyle; label: string }[] = [
-  { value: "square", label: "Квадраты" },
-  { value: "rounded", label: "Скругленные" },
-  { value: "extra-rounded", label: "Очень скругленные" },
-  { value: "dots", label: "Точки" },
-  { value: "classy", label: "Classy" },
-  { value: "classy-rounded", label: "Classy Rounded" }
+const DOT_STYLE_SELECT_OPTIONS: DotStyleSelectOption[] = [
+  { id: "square", value: "square", label: "Квадраты", dotStyle: "square" },
+  { id: "rounded", value: "rounded", label: "Скругленные", dotStyle: "rounded" },
+  { id: "extra-rounded", value: "extra-rounded", label: "Очень скругленные", dotStyle: "extra-rounded" },
+  { id: "dots", value: "dots", label: "Точки", dotStyle: "dots" },
+  { id: "classy", value: "classy", label: "Classy", dotStyle: "classy" },
+  { id: "classy-rounded", value: "classy-rounded", label: "Classy Rounded", dotStyle: "classy-rounded" },
+  ...CUSTOM_DOT_SHAPES.map((shape) => ({
+    id: `custom-dot-${shape.id}`,
+    value: `custom:${shape.id}`,
+    label: `${shape.emoji} ${shape.name}`,
+    dotStyle: "square" as DotStyle,
+    customShape: shape.id,
+  })),
 ];
 
 const EYE_OUTER_OPTIONS: { value: EyeStyle; label: string }[] = [
@@ -270,9 +232,24 @@ const EYE_OUTER_OPTIONS: { value: EyeStyle; label: string }[] = [
   { value: "dot", label: "Точка" }
 ];
 
-const EYE_INNER_OPTIONS: { value: EyeDotStyle; label: string }[] = [
-  { value: "square", label: "Квадрат" },
-  { value: "dot", label: "Точка" }
+type EyeInnerSelectOption = {
+  id: string;
+  label: string;
+  value: string;
+  eyeInner: EyeDotStyle;
+  customShape?: string;
+};
+
+const EYE_INNER_SELECT_OPTIONS: EyeInnerSelectOption[] = [
+  { id: "square", value: "square", label: "Квадрат", eyeInner: "square" },
+  { id: "dot", value: "dot", label: "Точка", eyeInner: "dot" },
+  ...CUSTOM_DOT_SHAPES.map((shape) => ({
+    id: `custom-eye-${shape.id}`,
+    value: `custom:${shape.id}`,
+    label: `${shape.emoji} ${shape.name}`,
+    eyeInner: "square" as EyeDotStyle,
+    customShape: shape.id,
+  })),
 ];
 
 const SHAPE_OPTIONS: { value: ShapeType; label: string }[] = [
@@ -434,35 +411,6 @@ export function GeneratorNew() {
     [updateStyle]
   );
 
-  const updateGradient = (key: GradientKey, updater: (current: Gradient) => Gradient) => {
-    const gradient = draft.style[key];
-    if (!gradient) return;
-    updateStyle({
-      [key]: updater(gradient)
-    } as Partial<StyleOptions>);
-  };
-
-  const handleGradientTypeChange = (key: GradientKey, type: GradientType) => {
-    triggerHaptic('light');
-    updateGradient(key, (current) => ({ ...current, type }));
-  };
-
-  const handleGradientRotationChange = (key: GradientKey, degrees: number) => {
-    updateGradient(key, (current) => ({
-      ...current,
-      rotation: degreesToRadians(degrees)
-    }));
-  };
-
-  const handleGradientColorChange = (key: GradientKey, stopIndex: number, color: string) => {
-    updateGradient(key, (current) => ({
-      ...current,
-      colorStops: current.colorStops.map((stop, index) =>
-        index === stopIndex ? { ...stop, color } : stop
-      )
-    }));
-  };
-
   const updateValue = useCallback(
     (name: string, value: string) => {
       setDraft((prev) => ({
@@ -500,10 +448,6 @@ export function GeneratorNew() {
     return limits[draft.style.errorCorrection] ?? 30;
   }, [draft.style.errorCorrection]);
 
-  const logoSizeExceedsLimit = Boolean(
-    draft.style.logoDataUrl && draft.style.logoSize > maxLogoSize
-  );
-
   useEffect(() => {
     if (draft.style.dotSpacing === undefined) {
       updateStyle({ dotSpacing: defaultStyle.dotSpacing });
@@ -521,27 +465,6 @@ export function GeneratorNew() {
       setQRCodeStylingCtor(() => module.default);
     });
   }, []);
-
-  const handleFileUpload = useCallback(
-    (file: File | null) => {
-      if (!file) {
-        triggerHaptic('light');
-        updateStyle({ logoDataUrl: undefined });
-        return;
-      }
-      if (!file.type.startsWith("image/")) {
-        triggerHaptic('light');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        triggerHaptic('medium');
-        updateStyle({ logoDataUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    },
-    [updateStyle]
-  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -599,19 +522,6 @@ export function GeneratorNew() {
     }
     return scoped;
   }, [draft.formValues, draft.type, activeDefinition.fields]);
-
-  const contrastRatio = useMemo(
-    () => getContrastRatio(draft.style.foreground, draft.style.background),
-    [draft.style.foreground, draft.style.background]
-  );
-  const showContrastWarning = contrastRatio > 0 && contrastRatio < 4.5;
-
-  const dotsGradientStart = draft.style.dotsGradient?.colorStops[0]?.color ?? "#0b1220";
-  const dotsGradientEnd = draft.style.dotsGradient?.colorStops[1]?.color ?? "#4a5568";
-  const backgroundGradientStart = draft.style.backgroundGradient?.colorStops[0]?.color ?? "#ffffff";
-  const backgroundGradientEnd = draft.style.backgroundGradient?.colorStops[1]?.color ?? "#f7fafc";
-  const cornersGradientStart = draft.style.cornersGradient?.colorStops[0]?.color ?? "#0b1220";
-  const cornersGradientEnd = draft.style.cornersGradient?.colorStops[1]?.color ?? "#4a5568";
 
   const regenerate = useCallback(() => {
     if (!qrRef.current) return false;
@@ -671,6 +581,7 @@ export function GeneratorNew() {
       margin: previewMargin,
       moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
       customDotShape: draft.style.customDotShape,
+      customEyeInnerShape: draft.style.customEyeInnerShape,
       qrOptions: {
         errorCorrectionLevel: draft.style.errorCorrection,
         mode: "Byte"
@@ -710,7 +621,8 @@ export function GeneratorNew() {
       qrRef.current?.applyExtension((svg: SVGElement, opts: any) =>
         spacingExtension(svg, {
           ...opts,
-          customDotShape: draft.style.customDotShape
+          customDotShape: draft.style.customDotShape,
+          customEyeInnerShape: draft.style.customEyeInnerShape
         })
       );
       schedulePreviewFit();
@@ -770,6 +682,7 @@ export function GeneratorNew() {
           margin: exportMargin,
           moduleSpacing: (draft.style.dotSpacing ?? 0) / 100,
           customDotShape: draft.style.customDotShape,
+          customEyeInnerShape: draft.style.customEyeInnerShape,
           qrOptions: {
             errorCorrectionLevel: draft.style.errorCorrection,
             mode: "Byte"
@@ -810,7 +723,8 @@ export function GeneratorNew() {
         exportQR.applyExtension((svg: SVGElement, opts: any) =>
           spacingExtension(svg, {
             ...opts,
-            customDotShape: draft.style.customDotShape
+            customDotShape: draft.style.customDotShape,
+            customEyeInnerShape: draft.style.customEyeInnerShape
           })
         );
 
@@ -867,12 +781,6 @@ export function GeneratorNew() {
     },
     [regenerate, qrPayload, activeDefinition, formValues, draft.style, QRCodeStylingCtor]
   );
-
-  const isLightColor = (color: string) => {
-    const rgb = hexToRgb(color);
-    if (!rgb) return false;
-    return relativeLuminance(rgb) > 0.5;
-  };
 
   return (
     <section className={styles.generator}>
@@ -994,84 +902,6 @@ export function GeneratorNew() {
       <div className={classNames(styles.tabContent, { [styles.tabContentActive]: activeTab === "style" })}>
         <div className={styles.inputGroup}>
           <label className={styles.inputLabel}>
-            <span>🎭 Стиль QR-кода</span>
-          </label>
-          <div className={styles.styleGrid}>
-            {STYLE_PRESETS.map((preset) => (
-              <div
-                key={preset.id}
-                className={classNames(styles.styleOption, {
-                  [styles.styleOptionActive]: draft.style.dotStyle === preset.dotStyle
-                })}
-                onClick={() => {
-                  updateStyle({ dotStyle: preset.dotStyle });
-                  triggerHaptic('light');
-                }}
-              >
-                <div className={styles.stylePreview}>{preset.emoji}</div>
-                <div className={styles.styleLabel}>{preset.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>
-            <span>🎨 Цветовая схема</span>
-          </label>
-          <div className={styles.colorPickerGroup}>
-            <div className={styles.colorPicker}>
-              <label className={styles.inputLabel} style={{ marginBottom: "8px" }}>Передний план</label>
-              <div
-                className={styles.colorPreview}
-                style={{
-                  background: draft.style.foreground,
-                  color: isLightColor(draft.style.foreground) ? "#000" : "#fff"
-                }}
-              >
-                {draft.style.foreground.toUpperCase()}
-              </div>
-              <input
-                type="color"
-                className={styles.colorInput}
-                value={draft.style.foreground}
-                onChange={(e) => updateStyle({ foreground: e.target.value })}
-              />
-            </div>
-            <div className={styles.colorPicker}>
-              <label className={styles.inputLabel} style={{ marginBottom: "8px" }}>Фон</label>
-              <div
-                className={styles.colorPreview}
-                style={{
-                  background: draft.style.background,
-                  color: isLightColor(draft.style.background) ? "#000" : "#fff"
-                }}
-              >
-                {draft.style.background.toUpperCase()}
-              </div>
-              <input
-                type="color"
-                className={styles.colorInput}
-                value={draft.style.background}
-                onChange={(e) => updateStyle({ background: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
-
-        {showContrastWarning && (
-          <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
-            ⚠️ <strong>Низкий контраст:</strong> текущее соотношение {contrastRatio.toFixed(2)}:1.
-            {" "}Подберите более контрастные цвета для лучшей сканируемости QR-кода.
-          </div>
-        )}
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>
             <span>🧩 Геометрия</span>
             <span className={styles.badge}>Форма и глазки</span>
           </label>
@@ -1097,14 +927,21 @@ export function GeneratorNew() {
               <span className={styles.fieldTitle}>Стиль точек</span>
               <select
                 className={styles.select}
-                value={draft.style.dotStyle}
+                value={draft.style.customDotShape ? `custom:${draft.style.customDotShape}` : draft.style.dotStyle}
                 onChange={(event) => {
-                  updateStyle({ dotStyle: event.target.value as DotStyle });
+                  const selected = DOT_STYLE_SELECT_OPTIONS.find((option) => option.value === event.target.value);
+                  if (!selected) {
+                    return;
+                  }
+                  updateStyle({
+                    dotStyle: selected.dotStyle,
+                    customDotShape: selected.customShape,
+                  });
                   triggerHaptic('light');
                 }}
               >
-                {DOT_STYLE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
+                {DOT_STYLE_SELECT_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.value}>
                     {option.label}
                   </option>
                 ))}
@@ -1131,43 +968,27 @@ export function GeneratorNew() {
               <span className={styles.fieldTitle}>Внутренние глазки</span>
               <select
                 className={styles.select}
-                value={draft.style.eyeInner}
+                value={draft.style.customEyeInnerShape ? `custom:${draft.style.customEyeInnerShape}` : draft.style.eyeInner}
                 onChange={(event) => {
-                  updateStyle({ eyeInner: event.target.value as EyeDotStyle });
+                  const selected = EYE_INNER_SELECT_OPTIONS.find((option) => option.value === event.target.value);
+                  if (!selected) {
+                    return;
+                  }
+                  updateStyle({
+                    eyeInner: selected.eyeInner,
+                    customEyeInnerShape: selected.customShape,
+                  });
                   triggerHaptic('light');
                 }}
               >
-                {EYE_INNER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
+                {EYE_INNER_SELECT_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </label>
           </div>
-
-          {draft.style.dotStyle === "square" && (
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Кастомная форма точек
-              </label>
-              <select
-                value={draft.style.customDotShape || ""}
-                onChange={(e) => {
-                  updateStyle({ customDotShape: e.target.value || undefined });
-                  triggerHaptic('light');
-                }}
-                className={styles.select}
-              >
-                <option value="">Стандартная</option>
-                {CUSTOM_DOT_SHAPES.map((shape) => (
-                  <option key={shape.id} value={shape.id}>
-                    {shape.emoji} {shape.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           <div className={styles.rangeGroup}>
             <label className={styles.inputLabel}>
@@ -1188,409 +1009,6 @@ export function GeneratorNew() {
             />
             <div className={styles.rangeHint}>0% — плотная сетка, 60% — заметные промежутки.</div>
           </div>
-        </div>
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>
-            <span>🌈 Градиенты</span>
-            <span className={styles.badge}>Расширенный цвет</span>
-          </label>
-          <div className={styles.gradientSection}>
-            <div className={styles.gradientBlock}>
-              <div className={styles.gradientHeader}>
-                <div className={styles.gradientName}>Точки</div>
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={draft.style.useDotsGradient}
-                    onChange={(event) => {
-                      updateStyle({ useDotsGradient: event.target.checked });
-                      triggerHaptic('light');
-                    }}
-                  />
-                  <span>Использовать градиент</span>
-                </label>
-              </div>
-
-              {draft.style.useDotsGradient && draft.style.dotsGradient && (
-                <>
-                  <div>
-                    <span className={styles.fieldTitle}>Тип градиента</span>
-                    <select
-                      className={styles.select}
-                      value={draft.style.dotsGradient.type}
-                      onChange={(event) =>
-                        handleGradientTypeChange('dotsGradient', event.target.value as GradientType)
-                      }
-                    >
-                      <option value="linear">Линейный</option>
-                      <option value="radial">Радиальный</option>
-                    </select>
-                  </div>
-
-                  {draft.style.dotsGradient.type === "linear" && (
-                    <div className={styles.rangeGroup}>
-                      <label className={styles.inputLabel}>
-                        <span>Угол поворота</span>
-                        <span className={styles.rangeValue}>
-                          {`${radiansToDegrees(draft.style.dotsGradient.rotation)}°`}
-                        </span>
-                      </label>
-                      <input
-                        type="range"
-                        className={styles.rangeInput}
-                        min={0}
-                        max={360}
-                        value={radiansToDegrees(draft.style.dotsGradient.rotation)}
-                        onChange={(event) =>
-                          handleGradientRotationChange('dotsGradient', Number(event.target.value))
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <div className={styles.gradientColorGroup}>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Начальный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: dotsGradientStart,
-                          color: isLightColor(dotsGradientStart) ? "#000" : "#fff"
-                        }}
-                      >
-                        {dotsGradientStart.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={dotsGradientStart}
-                        onChange={(event) =>
-                          handleGradientColorChange('dotsGradient', 0, event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Конечный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: dotsGradientEnd,
-                          color: isLightColor(dotsGradientEnd) ? "#000" : "#fff"
-                        }}
-                      >
-                        {dotsGradientEnd.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={dotsGradientEnd}
-                        onChange={(event) =>
-                          handleGradientColorChange('dotsGradient', 1, event.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className={styles.gradientBlock}>
-              <div className={styles.gradientHeader}>
-                <div className={styles.gradientName}>Фон</div>
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={draft.style.useBackgroundGradient}
-                    onChange={(event) => {
-                      updateStyle({ useBackgroundGradient: event.target.checked });
-                      triggerHaptic('light');
-                    }}
-                  />
-                  <span>Использовать градиент</span>
-                </label>
-              </div>
-
-              {draft.style.useBackgroundGradient && draft.style.backgroundGradient && (
-                <>
-                  <div>
-                    <span className={styles.fieldTitle}>Тип градиента</span>
-                    <select
-                      className={styles.select}
-                      value={draft.style.backgroundGradient.type}
-                      onChange={(event) =>
-                        handleGradientTypeChange('backgroundGradient', event.target.value as GradientType)
-                      }
-                    >
-                      <option value="linear">Линейный</option>
-                      <option value="radial">Радиальный</option>
-                    </select>
-                  </div>
-
-                  {draft.style.backgroundGradient.type === "linear" && (
-                    <div className={styles.rangeGroup}>
-                      <label className={styles.inputLabel}>
-                        <span>Угол поворота</span>
-                        <span className={styles.rangeValue}>
-                          {`${radiansToDegrees(draft.style.backgroundGradient.rotation)}°`}
-                        </span>
-                      </label>
-                      <input
-                        type="range"
-                        className={styles.rangeInput}
-                        min={0}
-                        max={360}
-                        value={radiansToDegrees(draft.style.backgroundGradient.rotation)}
-                        onChange={(event) =>
-                          handleGradientRotationChange('backgroundGradient', Number(event.target.value))
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <div className={styles.gradientColorGroup}>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Начальный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: backgroundGradientStart,
-                          color: isLightColor(backgroundGradientStart) ? "#000" : "#fff"
-                        }}
-                      >
-                        {backgroundGradientStart.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={backgroundGradientStart}
-                        onChange={(event) =>
-                          handleGradientColorChange('backgroundGradient', 0, event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Конечный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: backgroundGradientEnd,
-                          color: isLightColor(backgroundGradientEnd) ? "#000" : "#fff"
-                        }}
-                      >
-                        {backgroundGradientEnd.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={backgroundGradientEnd}
-                        onChange={(event) =>
-                          handleGradientColorChange('backgroundGradient', 1, event.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className={styles.gradientBlock}>
-              <div className={styles.gradientHeader}>
-                <div className={styles.gradientName}>Углы</div>
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={draft.style.useCornersGradient}
-                    onChange={(event) => {
-                      updateStyle({ useCornersGradient: event.target.checked });
-                      triggerHaptic('light');
-                    }}
-                  />
-                  <span>Использовать градиент</span>
-                </label>
-              </div>
-
-              {draft.style.useCornersGradient && draft.style.cornersGradient && (
-                <>
-                  <div>
-                    <span className={styles.fieldTitle}>Тип градиента</span>
-                    <select
-                      className={styles.select}
-                      value={draft.style.cornersGradient.type}
-                      onChange={(event) =>
-                        handleGradientTypeChange('cornersGradient', event.target.value as GradientType)
-                      }
-                    >
-                      <option value="linear">Линейный</option>
-                      <option value="radial">Радиальный</option>
-                    </select>
-                  </div>
-
-                  {draft.style.cornersGradient.type === "linear" && (
-                    <div className={styles.rangeGroup}>
-                      <label className={styles.inputLabel}>
-                        <span>Угол поворота</span>
-                        <span className={styles.rangeValue}>
-                          {`${radiansToDegrees(draft.style.cornersGradient.rotation)}°`}
-                        </span>
-                      </label>
-                      <input
-                        type="range"
-                        className={styles.rangeInput}
-                        min={0}
-                        max={360}
-                        value={radiansToDegrees(draft.style.cornersGradient.rotation)}
-                        onChange={(event) =>
-                          handleGradientRotationChange('cornersGradient', Number(event.target.value))
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <div className={styles.gradientColorGroup}>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Начальный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: cornersGradientStart,
-                          color: isLightColor(cornersGradientStart) ? "#000" : "#fff"
-                        }}
-                      >
-                        {cornersGradientStart.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={cornersGradientStart}
-                        onChange={(event) =>
-                          handleGradientColorChange('cornersGradient', 0, event.target.value)
-                        }
-                      />
-                    </div>
-                    <div className={classNames(styles.colorPicker, styles.gradientColorItem)}>
-                      <span className={styles.fieldTitle}>Конечный цвет</span>
-                      <div
-                        className={styles.colorPreview}
-                        style={{
-                          background: cornersGradientEnd,
-                          color: isLightColor(cornersGradientEnd) ? "#000" : "#fff"
-                        }}
-                      >
-                        {cornersGradientEnd.toUpperCase()}
-                      </div>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={cornersGradientEnd}
-                        onChange={(event) =>
-                          handleGradientColorChange('cornersGradient', 1, event.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>
-            <span>🪪 Логотип в центре</span>
-            <span className={styles.badge}>
-              {draft.style.logoDataUrl
-                ? `Макс ${maxLogoSize}% при ${draft.style.errorCorrection}`
-                : "Рекомендуем Q или H"}
-            </span>
-          </label>
-
-          <div className={styles.logoControls}>
-            <div className={styles.logoButtons}>
-              <label className={styles.logoUploadButton}>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml"
-                  className={styles.logoUploadInput}
-                  onChange={(event) => handleFileUpload(event.target.files?.[0] ?? null)}
-                />
-                {draft.style.logoDataUrl ? "Заменить логотип" : "Загрузить логотип"}
-              </label>
-              {draft.style.logoDataUrl && (
-                <button
-                  type="button"
-                  className={styles.logoRemoveButton}
-                  onClick={() => handleFileUpload(null)}
-                >
-                  Удалить
-                </button>
-              )}
-            </div>
-
-            {draft.style.logoDataUrl && (
-              <>
-                <div className={styles.logoPreview}>
-                  <img src={draft.style.logoDataUrl} alt="Предпросмотр логотипа" />
-                  <div className={styles.logoHint}>Логотип будет размещён по центру QR-кода.</div>
-                </div>
-
-                <div className={styles.rangeGroup}>
-                  <label className={styles.inputLabel}>
-                    <span>Размер логотипа</span>
-                    <span className={styles.rangeValue}>
-                      {Math.min(draft.style.logoSize, maxLogoSize)}%
-                    </span>
-                  </label>
-                  <input
-                    type="range"
-                    className={styles.rangeInput}
-                    min={10}
-                    max={maxLogoSize}
-                    value={Math.min(draft.style.logoSize, maxLogoSize)}
-                    onChange={(event) => updateStyle({ logoSize: Number(event.target.value) })}
-                  />
-                </div>
-
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={draft.style.hideBackgroundDots}
-                    onChange={(event) => updateStyle({ hideBackgroundDots: event.target.checked })}
-                  />
-                  <span>Скрыть точки под логотипом</span>
-                </label>
-
-                {logoSizeExceedsLimit && (
-                  <div className={classNames(styles.infoCard, styles.infoCardWarning)}>
-                    ⚠️ Логотип автоматически уменьшен до {maxLogoSize}% из-за текущего уровня коррекции ошибок.
-                    Увеличьте коррекцию для более крупного изображения.
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.divider}></div>
-
-        <div className={styles.templateGrid}>
-          {COLOR_PRESETS.map((preset) => (
-            <div
-              key={preset.name}
-              className={styles.templateCard}
-              onClick={() => {
-                updateStyle({ foreground: preset.fg, background: preset.bg });
-                triggerHaptic('medium');
-              }}
-            >
-              <div className={styles.templateName}>{preset.emoji} {preset.name}</div>
-              <div className={styles.templateDesc}>{preset.fg} / {preset.bg}</div>
-            </div>
-          ))}
         </div>
       </div>
 

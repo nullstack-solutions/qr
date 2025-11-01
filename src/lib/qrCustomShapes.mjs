@@ -38,6 +38,51 @@ function applyDotSpacing(svg, spacing) {
   });
 }
 
+function findModuleSize(rects) {
+  let smallest = Infinity;
+
+  rects.forEach((rect) => {
+    const width = Number(rect.getAttribute("width"));
+    const height = Number(rect.getAttribute("height"));
+    if (!Number.isFinite(width) || !Number.isFinite(height)) {
+      return;
+    }
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    smallest = Math.min(smallest, width, height);
+  });
+
+  return Number.isFinite(smallest) ? smallest : null;
+}
+
+function replaceRectWithShape(svg, rect, shape, scale) {
+  const width = Number(rect.getAttribute("width"));
+  const height = Number(rect.getAttribute("height"));
+  if (!width || !height) return;
+
+  const x = Number(rect.getAttribute("x"));
+  const y = Number(rect.getAttribute("y"));
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const newSize = Math.min(width, height) * scale;
+  const newX = centerX - newSize / 2;
+  const newY = centerY - newSize / 2;
+
+  const path = svg.ownerDocument.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", shape.renderPath(newX, newY, newSize));
+
+  const fill = rect.getAttribute("fill");
+  if (fill) {
+    path.setAttribute("fill", fill);
+  }
+
+  rect.parentNode?.replaceChild(path, rect);
+}
+
 const CUSTOM_DOT_SHAPES = [
   {
     id: "heart",
@@ -121,7 +166,7 @@ function isCustomDotShapeSupported(shapeId) {
   return CUSTOM_DOT_SHAPES.some((shape) => shape.id === shapeId);
 }
 
-function applyCustomDotShape(svg, shapeId, spacing) {
+function applyCustomDotShape(svg, shapeId, spacing, options = {}) {
   const shape = CUSTOM_DOT_SHAPES.find((item) => item.id === shapeId);
   if (!shape) {
     applyDotSpacing(svg, spacing);
@@ -130,7 +175,10 @@ function applyCustomDotShape(svg, shapeId, spacing) {
 
   const safeSpacing = clampSpacing(spacing);
   const scale = 1 - safeSpacing;
-  const rects = svg.querySelectorAll("rect");
+  const rects = Array.from(svg.querySelectorAll("rect"));
+  const moduleSize = findModuleSize(rects);
+  const innerSize = moduleSize ? moduleSize * 3 : null;
+  const tolerance = moduleSize ? moduleSize * 0.2 : null;
 
   rects.forEach((rect) => {
     const width = Number(rect.getAttribute("width"));
@@ -138,21 +186,45 @@ function applyCustomDotShape(svg, shapeId, spacing) {
     if (!width || !height) return;
     if (width > 40 || height > 40) return;
 
-    const x = Number(rect.getAttribute("x"));
-    const y = Number(rect.getAttribute("y"));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (options.skipInnerEyes && innerSize && tolerance) {
+      if (Math.abs(width - innerSize) <= tolerance && Math.abs(height - innerSize) <= tolerance) {
+        return;
+      }
+    }
 
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-    const newSize = Math.min(width, height) * scale;
-    const newX = centerX - newSize / 2;
-    const newY = centerY - newSize / 2;
+    replaceRectWithShape(svg, rect, shape, scale);
+  });
+}
 
-    const path = svg.ownerDocument.createElementNS(SVG_NS, "path");
-    path.setAttribute("d", shape.renderPath(newX, newY, newSize));
-    path.setAttribute("fill", rect.getAttribute("fill") || "#000000");
+function applyCustomInnerEyeShape(svg, shapeId) {
+  const shape = CUSTOM_DOT_SHAPES.find((item) => item.id === shapeId);
+  if (!shape) {
+    return;
+  }
 
-    rect.parentNode?.replaceChild(path, rect);
+  const rects = Array.from(svg.querySelectorAll("rect"));
+  if (!rects.length) {
+    return;
+  }
+
+  const moduleSize = findModuleSize(rects);
+  if (!moduleSize) {
+    return;
+  }
+
+  const expectedSize = moduleSize * 3;
+  const tolerance = moduleSize * 0.2;
+
+  rects.forEach((rect) => {
+    const width = Number(rect.getAttribute("width"));
+    const height = Number(rect.getAttribute("height"));
+    if (!width || !height) return;
+
+    if (Math.abs(width - expectedSize) > tolerance || Math.abs(height - expectedSize) > tolerance) {
+      return;
+    }
+
+    replaceRectWithShape(svg, rect, shape, 1);
   });
 }
 
@@ -162,5 +234,6 @@ export {
   applyDotSpacing,
   CUSTOM_DOT_SHAPES,
   applyCustomDotShape,
+  applyCustomInnerEyeShape,
   isCustomDotShapeSupported,
 };

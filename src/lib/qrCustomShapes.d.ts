@@ -13,6 +13,13 @@ export declare function applyDotSpacing(svg: SVGElement, spacing: number): void;
 
 export declare const CUSTOM_DOT_SHAPES: CustomDotShape[];
 
-export declare function applyCustomDotShape(svg: SVGElement, shapeId: string, spacing: number): void;
+export declare function applyCustomDotShape(
+  svg: SVGElement,
+  shapeId: string,
+  spacing: number,
+  options?: { skipInnerEyes?: boolean }
+): void;
+
+export declare function applyCustomInnerEyeShape(svg: SVGElement, shapeId: string): void;
 
 export declare function isCustomDotShapeSupported(shapeId: unknown): shapeId is string;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   applyCustomDotShape,
+  applyCustomInnerEyeShape,
   applyDotSpacing,
   clampSpacing,
   CUSTOM_DOT_SHAPES,
@@ -151,6 +152,38 @@ test("applyCustomDotShape skips large positioning modules", () => {
   applyCustomDotShape(svg, "star", 0);
 
   assert.equal(replacements.length, 0);
+});
+
+test("applyCustomDotShape can skip inner eye rectangles", () => {
+  const moduleRect = createRect({ width: 10, height: 10, x: 0, y: 0, fill: "#123456" });
+  const innerEyeRect = createRect({ width: 30, height: 30, x: 20, y: 20, fill: "#654321" });
+  const rects = [moduleRect, innerEyeRect];
+  const { svg, replacements } = createSvg(rects);
+
+  applyCustomDotShape(svg, "heart", 0.2, { skipInnerEyes: true });
+
+  assert.equal(replacements.length, 1, "only module rect should be replaced");
+  const [replacement] = replacements;
+  assert.equal(replacement.oldNode, moduleRect);
+  assert.equal(replacement.newNode.tagName, "path");
+  assert.equal(replacement.newNode.getAttribute("fill"), "#123456");
+  assert.equal(rects[1], innerEyeRect, "inner eye rect should remain untouched");
+});
+
+test("applyCustomInnerEyeShape replaces inner eye rectangles", () => {
+  const moduleRect = createRect({ width: 10, height: 10, x: 0, y: 0 });
+  const innerEyeRect = createRect({ width: 30, height: 30, x: 20, y: 20, fill: "#abcdef" });
+  const rects = [moduleRect, innerEyeRect];
+  const { svg, replacements } = createSvg(rects);
+
+  applyCustomInnerEyeShape(svg, "star");
+
+  assert.equal(replacements.length, 1, "inner eye rect should be replaced");
+  const [replacement] = replacements;
+  assert.equal(replacement.oldNode, innerEyeRect);
+  assert.equal(replacement.newNode.tagName, "path");
+  assert.equal(replacement.newNode.getAttribute("fill"), "#abcdef");
+  assert.equal(rects[0], moduleRect, "module rect should be unchanged");
 });
 
 test("isCustomDotShapeSupported guards against invalid values", () => {
