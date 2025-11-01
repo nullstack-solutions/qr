@@ -105,7 +105,17 @@ test.describe('QR code scannability', () => {
     const canvas = await getPreviewCanvas(page);
     await page.waitForTimeout(2000);
 
-    const qrData = decodeQr(await canvas.screenshot());
+    const screenshot = await canvas.screenshot();
+    const qrData = decodeQr(screenshot);
+
+    // Debug logging
+    console.log('Expected payload:', payload);
+    console.log('Decoded QR data:', qrData);
+    console.log('Payload bytes:', Buffer.from(payload, 'utf-8'));
+    if (qrData) {
+      console.log('Decoded bytes:', Buffer.from(qrData, 'utf-8'));
+    }
+
     expect(qrData).toBe(payload);
   });
 });
