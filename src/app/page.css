@@ -397,11 +397,8 @@
 .preview__canvas canvas,
 .preview__canvas svg {
   width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  object-fit: contain;
-  display: block;
+  height: auto !important;
+  max-width: 150px;
 }
 
 .preview__actions {
