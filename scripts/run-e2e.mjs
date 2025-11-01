@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 
 const run = (command, args, options = {}) =>
   new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', shell: false, ...options });
+    const child = spawn(command, args, { stdio: 'inherit', shell: true, ...options });
 
     child.on('error', reject);
     child.on('exit', (code) => {
