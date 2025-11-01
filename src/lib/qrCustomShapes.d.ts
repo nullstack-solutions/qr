@@ -9,10 +9,17 @@ export declare const SVG_NS: string;
 
 export declare function clampSpacing(value: number): number;
 
-export declare function applyDotSpacing(svg: SVGElement, spacing: number): void;
+export type CustomShapeFilter = (rect: SVGElement, width: number, height: number) => boolean;
+
+export declare function applyDotSpacing(svg: SVGElement, spacing: number, filter?: CustomShapeFilter): void;
 
 export declare const CUSTOM_DOT_SHAPES: CustomDotShape[];
 
-export declare function applyCustomDotShape(svg: SVGElement, shapeId: string, spacing: number): void;
+export declare function applyCustomDotShape(
+  svg: SVGElement,
+  shapeId: string,
+  spacing: number,
+  filter?: CustomShapeFilter
+): void;
 
 export declare function isCustomDotShapeSupported(shapeId: unknown): shapeId is string;
