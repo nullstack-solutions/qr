@@ -1,33 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TelegramThemeParams } from '@/types/telegram';
+import { TelegramThemeParams, TelegramWebApp } from '@/types/telegram';
 import '@/types/telegram';
 
+const getTelegramWebApp = (): TelegramWebApp | undefined =>
+  (typeof window === 'undefined' ? undefined : window.Telegram?.WebApp);
+
 export function useTelegramTheme() {
-  const [theme, setTheme] = useState<TelegramThemeParams>({});
-  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>('light');
-  const [isAvailable, setIsAvailable] = useState(false);
+  const webApp = getTelegramWebApp();
+  const [theme, setTheme] = useState<TelegramThemeParams>(() => webApp?.themeParams ?? {});
+  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(
+    () => webApp?.colorScheme ?? 'light'
+  );
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.Telegram?.WebApp) {
-      setIsAvailable(false);
+    if (!webApp) {
       return;
     }
 
-    setIsAvailable(true);
-    const WebApp = window.Telegram.WebApp;
+    const updateTheme = () => {
+      setTheme({ ...webApp.themeParams });
+      setColorScheme(webApp.colorScheme);
+    };
 
-    setTheme(WebApp.themeParams);
-    setColorScheme(WebApp.colorScheme);
-  }, []);
+    updateTheme();
+    webApp.onEvent?.('themeChanged', updateTheme);
+
+    return () => {
+      webApp.offEvent?.('themeChanged', updateTheme);
+    };
+  }, [webApp]);
 
   return {
     theme,
     colorScheme,
-    isAvailable,
-    platform: typeof window !== 'undefined' && window.Telegram?.WebApp
-      ? window.Telegram.WebApp.platform
-      : 'unknown'
+    isAvailable: Boolean(webApp),
+    platform: webApp?.platform ?? 'unknown'
   };
 }
