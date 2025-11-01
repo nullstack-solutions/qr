@@ -192,7 +192,7 @@ const QR_TYPES = [
           if (!value.trim()) return null;
           const normalized = value.trim().toUpperCase();
           if (!ALLOWED_WIFI_AUTH.has(normalized)) {
-            return "Допустимо: WPA, WPA2, WEP или nopass";
+            return `Допустимо: ${Array.from(ALLOWED_WIFI_AUTH).join(', ')}`;
           }
           return null;
         }

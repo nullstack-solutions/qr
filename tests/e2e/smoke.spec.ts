@@ -67,8 +67,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       }
     };
 
-    // @ts-ignore - injected before app bootstraps
-    window.Telegram = { ...value, WebApp: stubbedWebApp };
+    (window as any).Telegram = { ...value, WebApp: stubbedWebApp };
   }, tgMock());
 });
 
