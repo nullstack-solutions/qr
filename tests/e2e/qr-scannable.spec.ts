@@ -13,7 +13,7 @@ function decodeQr(buffer: Buffer): string | null {
 async function getPreviewCanvas(page: Page): Promise<Locator> {
   const container = page.locator('[class*="qrPreview"]').first();
   await container.waitFor({ state: 'visible', timeout: 30_000 });
-  const canvas = container.locator('canvas, svg').first();
+  const canvas = container.locator('canvas, svg, img').first();
   await expect(canvas).toBeVisible({ timeout: 30_000 });
   return canvas;
 }

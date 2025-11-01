@@ -80,7 +80,7 @@ async function capturePreviewScreenshot(
     animations: 'disabled'
   });
 
-  const canvas = qrContainer.locator('canvas, svg').first();
+  const canvas = qrContainer.locator('canvas, svg, img').first();
   await writeCanvasMetadata(page, path, canvas, 'container', qrContainer, payload);
 }
 
@@ -95,8 +95,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture default QR preview', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -129,8 +130,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture QR preview with custom colors', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -176,8 +178,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture QR preview with circle shape', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -221,8 +224,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture QR preview with gradient', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -265,8 +269,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture QR preview with different dot styles', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -308,8 +313,9 @@ test.describe('QR Code Preview Screenshots', () => {
 
   test('capture full page with QR preview', async ({ page }, testInfo) => {
     const hasWebKitProject = testInfo.config.projects.some((project) => project.name.includes('WebKit'));
+    const forceAndroid = process.env.FORCE_ANDROID === '1';
     test.skip(
-      hasWebKitProject && testInfo.project.name.includes('Android'),
+      !forceAndroid && hasWebKitProject && testInfo.project.name.includes('Android'),
       'Android viewport hydration is flaky under Playwright when WebKit coverage is available.'
     );
 
@@ -338,7 +344,7 @@ test.describe('QR Code Preview Screenshots', () => {
       animations: 'disabled'
     });
 
-    const canvas = page.locator('[class*="qrPreview"]').first().locator('canvas, svg').first();
+    const canvas = page.locator('[class*="qrPreview"]').first().locator('canvas, svg, img').first();
     await writeCanvasMetadata(
       page,
       fullPagePath,
