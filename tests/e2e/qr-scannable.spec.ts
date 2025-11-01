@@ -52,19 +52,47 @@ test.describe('QR code scannability', () => {
     const styleTab = page.getByRole('button', { name: '🎨 Стиль' });
     await styleTab.click();
 
-    const styleLabels = ['Квадраты', 'Точки', 'Скругленные'];
+    const dotStyles = [
+      { value: 'square', label: 'Квадраты' },
+      { value: 'dots', label: 'Точки' },
+      { value: 'rounded', label: 'Скругленные' }
+    ];
 
-    for (const label of styleLabels) {
-      const styleOption = page.locator('[class*="styleOption"]', { hasText: label }).first();
-      await expect(styleOption, `Style option "${label}" should be visible`).toBeVisible({ timeout: 30_000 });
-      await styleOption.click();
+    const eyeOuterStyles = [
+      { value: 'square', label: 'Квадрат' },
+      { value: 'extra-rounded', label: 'Скруглённый' },
+      { value: 'dot', label: 'Точка' }
+    ];
 
-      await page.getByRole('button', { name: '⬇️ Скачать QR' }).click();
-      await page.waitForTimeout(500);
+    const eyeInnerStyles = [
+      { value: 'square', label: 'Квадрат' },
+      { value: 'dot', label: 'Точка' }
+    ];
 
-      const canvas = await getPreviewCanvas(page);
-      const qrData = decodeQr(await canvas.screenshot());
-      expect(qrData, `QR with dot style "${label}" should be decodable`).toBe(testUrl);
+    const dotStyleSelect = page.locator('label:has-text("Стиль точек") select');
+    const eyeOuterSelect = page.locator('label:has-text("Внешние глазки") select');
+    const eyeInnerSelect = page.locator('label:has-text("Внутренние глазки") select');
+
+    for (const dotStyle of dotStyles) {
+      await dotStyleSelect.selectOption(dotStyle.value);
+
+      for (const eyeOuter of eyeOuterStyles) {
+        await eyeOuterSelect.selectOption(eyeOuter.value);
+
+        for (const eyeInner of eyeInnerStyles) {
+          await eyeInnerSelect.selectOption(eyeInner.value);
+
+          await page.getByRole('button', { name: '⬇️ Скачать QR' }).click();
+          await page.waitForTimeout(500);
+
+          const canvas = await getPreviewCanvas(page);
+          const qrData = decodeQr(await canvas.screenshot());
+          expect(
+            qrData,
+            `QR with dot style "${dotStyle.label}", eye outer "${eyeOuter.label}" and inner "${eyeInner.label}" should be decodable`
+          ).toBe(testUrl);
+        }
+      }
     }
   });
 

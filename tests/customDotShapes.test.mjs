@@ -99,6 +99,19 @@ test("applyDotSpacing scales modules when no custom shape is provided", () => {
   assert.equal(rect.getAttribute("y"), "1.000");
 });
 
+test("applyDotSpacing respects provided filter", () => {
+  const rectA = createRect({ width: 10, height: 10, x: 0, y: 0 });
+  const rectB = createRect({ width: 12, height: 12, x: 20, y: 0 });
+  const { svg } = createSvg([rectA, rectB]);
+
+  applyDotSpacing(svg, 0.2, (rect) => rect === rectA);
+
+  assert.equal(rectA.getAttribute("width"), "8.000");
+  assert.equal(rectA.getAttribute("height"), "8.000");
+  assert.equal(rectB.getAttribute("width"), "12");
+  assert.equal(rectB.getAttribute("height"), "12");
+});
+
 test("applyCustomDotShape replaces rects with SVG paths", () => {
   const rect = createRect({ width: 12, height: 12, x: 4, y: 6, fill: "#ff0000" });
   const { svg, replacements } = createSvg([rect]);
@@ -157,4 +170,20 @@ test("isCustomDotShapeSupported guards against invalid values", () => {
   assert.equal(isCustomDotShapeSupported("heart"), true);
   assert.equal(isCustomDotShapeSupported("unknown"), false);
   assert.equal(isCustomDotShapeSupported(null), false);
+});
+
+test("applyCustomDotShape only transforms rects accepted by filter", () => {
+  const heart = CUSTOM_DOT_SHAPES.find((shape) => shape.id === "heart");
+  assert.ok(heart);
+
+  const rectSmall = createRect({ width: 12, height: 12, x: 0, y: 0, fill: "#000" });
+  const rectLarge = createRect({ width: 36, height: 36, x: 20, y: 20, fill: "#111" });
+  const { svg, replacements } = createSvg([rectSmall, rectLarge]);
+
+  applyCustomDotShape(svg, "heart", 0, (rect, width) => width < 20);
+
+  assert.equal(replacements.length, 1);
+  assert.equal(replacements[0].oldNode, rectSmall);
+  assert.equal(rectLarge.tagName, "rect");
+  assert.equal(rectLarge.getAttribute("fill"), "#111");
 });

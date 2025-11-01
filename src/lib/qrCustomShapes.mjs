@@ -7,7 +7,7 @@ function clampSpacing(value) {
   return value;
 }
 
-function applyDotSpacing(svg, spacing) {
+function applyDotSpacing(svg, spacing, filter) {
   const safeSpacing = clampSpacing(spacing);
   // Always apply spacing transformation, even when spacing = 0
   // This ensures we override any default spacing from the library
@@ -19,6 +19,10 @@ function applyDotSpacing(svg, spacing) {
     const height = Number(rect.getAttribute("height"));
     if (!width || !height) return;
     if (width > 40 || height > 40) return;
+
+    if (typeof filter === "function" && !filter(rect, width, height)) {
+      return;
+    }
 
     const x = Number(rect.getAttribute("x"));
     const y = Number(rect.getAttribute("y"));
@@ -121,10 +125,10 @@ function isCustomDotShapeSupported(shapeId) {
   return CUSTOM_DOT_SHAPES.some((shape) => shape.id === shapeId);
 }
 
-function applyCustomDotShape(svg, shapeId, spacing) {
+function applyCustomDotShape(svg, shapeId, spacing, filter) {
   const shape = CUSTOM_DOT_SHAPES.find((item) => item.id === shapeId);
   if (!shape) {
-    applyDotSpacing(svg, spacing);
+    applyDotSpacing(svg, spacing, filter);
     return;
   }
 
@@ -137,6 +141,10 @@ function applyCustomDotShape(svg, shapeId, spacing) {
     const height = Number(rect.getAttribute("height"));
     if (!width || !height) return;
     if (width > 40 || height > 40) return;
+
+    if (typeof filter === "function" && !filter(rect, width, height)) {
+      return;
+    }
 
     const x = Number(rect.getAttribute("x"));
     const y = Number(rect.getAttribute("y"));
