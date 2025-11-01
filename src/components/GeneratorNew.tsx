@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { QRType, getTypeDefinition } from "@/lib/qrTypes";
-import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
 import { QR_SYSTEM, calculateMarginPx } from "@/lib/qrConstants";
 import { AwesomeQrStyling, type AwesomeQrStylingOptions } from "@/lib/awesomeQrStyling";
@@ -591,7 +590,7 @@ export function GeneratorNew() {
     const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
 
     const options: AwesomeQrStylingOptions = {
-      data: bytesToBinaryString(encodedBytes),
+      data: payload,
       width: previewSize,
       height: previewSize,
       image: draft.style.logoDataUrl,
@@ -681,7 +680,7 @@ export function GeneratorNew() {
 
         // Создаем временный экземпляр с размером для экспорта
         const exportOptions: AwesomeQrStylingOptions = {
-          data: bytesToBinaryString(encodedBytes),
+          data: payload,
           width: exportSize,
           height: exportSize,
           image: draft.style.logoDataUrl,
