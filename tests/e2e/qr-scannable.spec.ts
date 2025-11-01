@@ -100,9 +100,11 @@ test.describe('QR code scannability', () => {
     await textInput.fill(payload);
 
     await page.getByRole('button', { name: '⬇️ Скачать QR' }).click();
-    await page.waitForTimeout(500);
 
+    // Wait for QR code image to fully load (awesome-qr uses async rendering)
     const canvas = await getPreviewCanvas(page);
+    await page.waitForTimeout(2000);
+
     const qrData = decodeQr(await canvas.screenshot());
     expect(qrData).toBe(payload);
   });
