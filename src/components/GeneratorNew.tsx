@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { QRType, QR_TYPES, getTypeDefinition } from "@/lib/qrTypes";
+import { QRType, getTypeDefinition } from "@/lib/qrTypes";
 import { bytesToBinaryString } from "@/lib/binary";
 import { useDraft } from "@/hooks/useDraft";
 import { QR_SYSTEM, calculateMarginPx } from "@/lib/qrConstants";
@@ -585,7 +585,6 @@ export function GeneratorNew() {
       const previewSize = QR_SYSTEM.PREVIEW.LOGICAL_SIZE;
       // Для preview используем margin, рассчитанный из процентов черновика
       const previewMargin = calculateMarginPx(previewSize, draft.style.marginPercent);
-      console.log('[QR PREVIEW] Creating QR with margin:', previewMargin, 'size:', previewSize);
 
       const instance = new QRCodeStylingCtor({
         type: "svg", // SVG для превью

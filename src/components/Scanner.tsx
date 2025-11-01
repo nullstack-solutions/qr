@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import type { TelegramWebApp } from "@/types/telegram";
 
 interface ScanResult {
   text: string;
@@ -20,9 +21,7 @@ export function Scanner() {
 
   const isMobile = useMemo(() => {
     if (typeof window === "undefined") return false;
-    const tgPlatform = (window as typeof window & {
-      Telegram?: { WebApp?: { platform?: string } };
-    }).Telegram?.WebApp?.platform;
+    const tgPlatform = window.Telegram?.WebApp?.platform;
     if (tgPlatform && ["ios", "android", "android_x"].includes(tgPlatform)) {
       return true;
     }
