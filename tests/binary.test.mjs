@@ -20,10 +20,10 @@ async function loadBinaryModule() {
     fileName: fileURLToPath(moduleUrl)
   });
 
-  const module = { exports: {} };
+  const moduleScope = { exports: {} };
   const sandbox = {
-    module,
-    exports: module.exports,
+    module: moduleScope,
+    exports: moduleScope.exports,
     require,
     TextEncoder,
     TextDecoder
